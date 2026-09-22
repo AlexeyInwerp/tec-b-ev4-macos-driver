@@ -102,11 +102,11 @@ see the current configuration.
 `tools/bev4ctl.py` talks to both:
 
 ```sh
-bev4ctl.py --host 192.168.178.135 status   # live state + remaining count
-bev4ctl.py --host 192.168.178.135 info     # model, serial, firmware, mileage
-bev4ctl.py --host 192.168.178.135 params   # stored configuration
-bev4ctl.py --host 192.168.178.135 feed
-bev4ctl.py --host 192.168.178.135 print label.tpcl
+bev4ctl.py --host 192.168.1.50 status   # live state + remaining count
+bev4ctl.py --host 192.168.1.50 info     # model, serial, firmware, mileage
+bev4ctl.py --host 192.168.1.50 params   # stored configuration
+bev4ctl.py --host 192.168.1.50 feed
+bev4ctl.py --host 192.168.1.50 print label.tpcl
 ```
 
 The web UI lives at `http://<printer-ip>/` and its pages are:
@@ -204,7 +204,7 @@ usual 9100), **LPR** on 515, and serves a **web UI on port 80**.
 Once it has an address on your subnet:
 
 ```sh
-lpadmin -p TEC_B_EV4_NET -E -v socket://192.168.178.135:8000 \
+lpadmin -p TEC_B_EV4_NET -E -v socket://192.168.1.50:8000 \
         -P driver/ppd/tecbev4d.ppd \
         -o PageSize=w283h425 -o teMediaTracking=2 -o MediaType=Direct \
         -o Resolution=203dpi -o Gap=2
@@ -246,7 +246,7 @@ printer *on its own subnet* by giving your Mac a temporary second address
 there:
 
 ```sh
-sudo tools/lan-setup.sh --dhcp          # or: --ip 192.168.178.60
+sudo tools/lan-setup.sh --dhcp          # or: --ip 192.168.1.60
 ```
 
 It adds `192.168.10.99/24` to your default interface, sends `[ESC]WS` first and
@@ -282,7 +282,7 @@ Scan for the port signature rather than by name; there is no mDNS to find:
 
 ```sh
 # the B-EV4 answers on 515 (LPD), 8000 (socket) and 80 (web UI)
-nmap -p 80,515,8000 192.168.178.0/24 --open
+nmap -p 80,515,8000 192.168.1.0/24 --open
 ```
 
 Confirm identity without printing anything — `[ESC]IR` returns model and

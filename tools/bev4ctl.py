@@ -11,11 +11,11 @@ The printer exposes two independent management surfaces:
 
 This tool talks to both.
 
-  bev4ctl.py --host 192.168.178.135 status
-  bev4ctl.py --host 192.168.178.135 info
-  bev4ctl.py --host 192.168.178.135 params
-  bev4ctl.py --host 192.168.178.135 feed
-  bev4ctl.py --host 192.168.178.135 print label.tpcl
+  bev4ctl.py --host 192.168.1.50 status
+  bev4ctl.py --host 192.168.1.50 info
+  bev4ctl.py --host 192.168.1.50 params
+  bev4ctl.py --host 192.168.1.50 feed
+  bev4ctl.py --host 192.168.1.50 print label.tpcl
 """
 import argparse, re, socket, sys, urllib.parse
 

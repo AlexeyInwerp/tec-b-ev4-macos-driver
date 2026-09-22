@@ -1,7 +1,7 @@
 #!/bin/bash
 # Move a factory-default Toshiba TEC B-EV4 onto your real LAN, over the network.
 #
-#   sudo ./lan-setup.sh [--dhcp | --ip 192.168.178.60]
+#   sudo ./lan-setup.sh [--dhcp | --ip 192.168.1.60]
 #
 # The printer ships on a static 192.168.10.20, so it is invisible from any
 # other subnet even though it is physically on the wire. This adds a temporary
