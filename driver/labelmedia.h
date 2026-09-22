@@ -73,7 +73,7 @@
 #media "w576h468/8.00x6.50\"" 576 468
 
 
-// Metric label sizes (common European / shipping label stock)
+// Metric label sizes (common European label stock)
 #media "w283h425/100 x 150 mm" 283 425
 #media "w283h283/100 x 100 mm" 283 283
 #media "w283h213/100 x 75 mm" 283 213

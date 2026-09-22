@@ -16,7 +16,7 @@ Mac.
 | Native TPCL text / lines / boxes | working |
 | Native TPCL barcodes (CODE128 etc.) | working |
 | CUPS raster driver (print any app / PDF) | working |
-| TOPIX graphics compression | working (~12:1 on a real shipping label) |
+| TOPIX graphics compression | working (~12:1 on a typical 100 × 150 mm label) |
 | 100 × 150 mm direct thermal | working, default media |
 | Verbose debug filter + TPCL decoder | working |
 | LAN / socket printing | working (`socket://<ip>:8000`) |
