@@ -19,7 +19,7 @@ Mac.
 | TOPIX graphics compression | working (~12:1 on a typical 100 × 150 mm label) |
 | 100 × 150 mm direct thermal | working, default media |
 | Verbose debug filter + TPCL decoder | working |
-| LAN / socket printing | working (`socket://<ip>:8000`) |
+| LAN printing | working via **LPD** (`lpd://<ip>/lp`); raw socket is broken |
 | Web UI + CLI administration | working |
 | Media sensor (transmissive / gap) | working |
 
@@ -198,17 +198,67 @@ lp -d TEC_B_EV4 -o raw /tmp/tpcl-debug/<stamp>.tpcl   # replay
 
 ## Network (LAN) printing
 
-The B-EV4's LAN interface speaks **raw socket** (default port **8000**, not the
-usual 9100), **LPR** on 515, and serves a **web UI on port 80**.
+The B-EV4's LAN interface offers **LPD on port 515**, a **raw socket on port
+8000**, and a **web UI on port 80**.
 
-Once it has an address on your subnet:
+> **Use LPD. Do not use the raw socket port.**
+>
+> The raw socket silently discards anything much over a few kilobytes — see
+> below. LPD works correctly, including full-page TOPIX-compressed graphics.
 
 ```sh
-lpadmin -p TEC_B_EV4_NET -E -v socket://192.168.1.50:8000 \
+lpadmin -p TEC_B_EV4_NET -E -v lpd://192.168.1.50/lp \
         -P driver/ppd/tecbev4d.ppd \
         -o PageSize=w283h425 -o teMediaTracking=2 -o MediaType=Direct \
-        -o Resolution=203dpi -o Gap=2
+        -o Resolution=203dpi -o Gap=2 -o teGraphicsMode=1
 ```
+
+### Why not `socket://`
+
+`socket://<ip>:8000` is the obvious choice and it is a trap. Small jobs print,
+so it looks like it works — then real jobs vanish. Measured on a B-EV4-G
+running firmware V1.1G:
+
+| Job | Size | Result over `socket://8000` |
+| --- | --- | --- |
+| Text and lines only | 1.2 KB | prints |
+| One small graphic | 0.4 KB | prints |
+| 12 banded graphics | 7.7 KB | prints |
+| 100 banded graphics | 63 KB | **syntax error, nothing printed** |
+| Full page, TOPIX | 9.7 KB | **no error, nothing printed** |
+| Full page, banded nibble | 251 KB | **no error, nothing printed** |
+
+The failure is silent in the worst way: CUPS reports the job completed, the
+printer reports status `00` (normal), and no label appears. The printer accepts
+the whole job into its TCP buffers in milliseconds without ever applying
+backpressure — far faster than a device with a 1 KB receive buffer could
+actually consume it — so the data is being taken in and dropped.
+
+Things that did **not** fix it, in case you are tempted:
+
+* **Pacing the send.** Chunking with delays makes it *worse* — a pause inside a
+  graphic payload produces a syntax error where a straight burst does not.
+* **Avoiding binary data.** Nibble mode (every byte `30H`-`3FH`, pure printable
+  ASCII) fails exactly like TOPIX, so this is not byte-level corruption.
+* **Splitting into small commands.** 400 self-contained `SG` commands, none
+  larger than 626 bytes, fail just as a single large one does. The limit is on
+  the job, not the command.
+* **Either control-code family.** `[ESC]…[LF][NUL]` and `{…|}` behave the same.
+
+The identical byte streams print correctly over USB, and over LPD. It is the
+raw-socket implementation in the print server that is at fault, nothing else.
+
+### Sending to LPD directly
+
+`tools/lpdsend.py` is a minimal RFC 1179 client, useful for testing without
+CUPS in the way:
+
+```sh
+tools/lpdsend.py label.tpcl lp
+```
+
+Every stage is acknowledged by the printer, which is exactly what the raw
+socket fails to do.
 
 ### The problem: a factory-fresh unit is invisible on your network
 

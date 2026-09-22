@@ -172,6 +172,7 @@ Group "AdvancedSetting/Advanced Printer Settings"
     *Choice "1/TOPIX Compression" ""
     Choice "2/Raw 8bit Graphics (overwrite)" ""
     Choice "3/Raw 8bit Graphics (logic OR)" ""
+    Choice "4/Banded nibble (required for network/socket)" ""
   Option "FAdjSgn/Feed Direction" PickOne AnySetup 20
     *Choice "0/+" ""
      Choice "1/-" ""

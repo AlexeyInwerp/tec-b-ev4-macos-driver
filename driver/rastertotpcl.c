@@ -64,6 +64,24 @@
 #define TEC_GMODE_TOPIX   3
 #define TEC_GMODE_HEX_AND 1
 #define TEC_GMODE_HEX_OR  5
+#define TEC_GMODE_NIBBLE  0   /* Nibble mode (4 dots/byte), overwrite */
+
+/*
+ * Banded output.
+ *
+ * The printer's receive buffer is 1 KB. Over USB the host is throttled by
+ * hardware flow control mid-command, so a single [ESC]SG carrying a whole
+ * page streams through fine. Over a TCP socket there is no such backpressure:
+ * an SG command whose payload exceeds the buffer is truncated, and the printer
+ * then consumes the following commands as graphic data - so the job is
+ * silently discarded with no error.
+ *
+ * Banded mode emits the page as a series of small, self-contained SG commands
+ * instead, each payload well under the buffer, so every command is consumed
+ * before the next arrives. Pacing a single large command does NOT work: delays
+ * inside a graphic payload make the printer report a syntax error.
+ */
+#define TEC_BAND_MAX_BYTES 600  /* Payload budget per SG command */
 
 
 /*
@@ -81,6 +99,12 @@ int   Page,           /* Current page */
 
 int		ModelNumber; 		/* cupsModelNumber attribute (not currently in use) */
 
+static unsigned char  *BandBuffer;    /* Nibble data for the current band */
+static int    BandBytes;              /* Bytes currently in BandBuffer */
+static int    BandLines;              /* Raster lines currently in BandBuffer */
+static int    BandMaxLines;           /* Lines per band, from the byte budget */
+static int    BandStartLine;          /* First raster line of the current band */
+
 /*
  * Prototypes...
  */
@@ -90,6 +114,7 @@ void EndPage(ppd_file_t *ppd, cups_page_header2_t *header);
 void CancelJob(int sig);
 void OutputLine(ppd_file_t *ppd, cups_page_header2_t *header, int y);
 
+void FlushBand(cups_page_header2_t *header);
 void TOPIXCompress(ppd_file_t *ppd, cups_page_header2_t *header, int y);
 void TOPIXCompressOutputBuffer(ppd_file_t *ppd, cups_page_header2_t *header, int y);
 
@@ -382,6 +407,9 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   /* Get graphics mode from ppd file for graphics drawing */
   choice = ppdFindMarkedChoice(ppd,"teGraphicsMode");
   switch (atoi(choice->choice)) {
+    case 4:
+      Gmode = TEC_GMODE_NIBBLE; // Banded nibble mode - safe over a network socket
+      break;
     case 3:
       Gmode = TEC_GMODE_HEX_OR; // OR drawing hex mode
       break;
@@ -393,8 +421,27 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
       Gmode = TEC_GMODE_TOPIX;
   }
 
-  // Only print the graphics if NOT in TOPIX mode!
-  if (Gmode != TEC_GMODE_TOPIX)
+  if (Gmode == TEC_GMODE_NIBBLE)
+  {
+   /*
+    * Two nibble bytes per raster byte. Emit whole lines only, at least one
+    * per band however wide the page is.
+    */
+    int perline = header->cupsBytesPerLine * 2;
+
+    BandMaxLines = TEC_BAND_MAX_BYTES / perline;
+    if (BandMaxLines < 1)
+      BandMaxLines = 1;
+
+    BandBuffer    = malloc((size_t)perline * BandMaxLines);
+    BandBytes     = 0;
+    BandLines     = 0;
+    BandStartLine = 0;
+
+    fprintf(stderr, "DEBUG: banded nibble mode, %d bytes/line, %d lines/band\n",
+            perline, BandMaxLines);
+  }
+  else if (Gmode != TEC_GMODE_TOPIX)
   {
     printf("{SG;0000,0000,%04d,%04d,%d,", header->cupsBytesPerLine * 8, header->cupsHeight, Gmode);
   }
@@ -588,6 +635,12 @@ EndPage(ppd_file_t *ppd,		/* I - PPD file */
       Tmirror = 0;
 
     /*
+     * Flush any partial band before issuing, or its lines are lost.
+     */
+    if (Gmode == TEC_GMODE_NIBBLE)
+      FlushBand(header);
+
+    /*
      * End the label and eject...
      */
     // printf("{PV00;0010,%4d,0020,0020,A,00,B=----Hello Linux World From S.K.E----- |}\n",header->PageSize[1]*254/72 - 50);
@@ -626,6 +679,8 @@ EndPage(ppd_file_t *ppd,		/* I - PPD file */
   if (Gmode == TEC_GMODE_TOPIX) {
     free(LastBuffer);
     free(CompBuffer);
+  } else if (Gmode == TEC_GMODE_NIBBLE) {
+    free(BandBuffer);
   }
   free(Buffer);
 }
@@ -659,11 +714,58 @@ OutputLine(ppd_file_t           *ppd,	    /* I - PPD file */
 
   if (Gmode == TEC_GMODE_TOPIX) {
     TOPIXCompress(ppd, header, y);
+  } else if (Gmode == TEC_GMODE_NIBBLE) {
+    unsigned int i;
+
+    if (BandLines == 0)
+      BandStartLine = y;
+
+   /*
+    * Nibble mode carries 4 dots per byte as 30H-3FH, so each raster byte
+    * becomes two printable bytes - high nibble first.
+    */
+    for (i = 0; i < header->cupsBytesPerLine; i ++)
+    {
+      BandBuffer[BandBytes ++] = 0x30 + ((Buffer[i] >> 4) & 0x0F);
+      BandBuffer[BandBytes ++] = 0x30 + (Buffer[i] & 0x0F);
+    }
+    BandLines ++;
+
+    if (BandLines >= BandMaxLines)
+      FlushBand(header);
   } else {
     // Hex Output
     fwrite(Buffer, 1, header->cupsBytesPerLine, stdout);
   }
 
+}
+
+
+/*
+ * 'FlushBand()' - Emit the buffered lines as one self-contained SG command.
+ */
+void
+FlushBand(cups_page_header2_t *header)  /* I - Page header */
+{
+  int y_tenths;   /* Band origin, in 0.1 mm units */
+
+  if (BandLines == 0)
+    return;
+
+ /*
+  * Coordinates are in 0.1 mm, the raster is in dots, so convert via the
+  * vertical resolution rather than assuming 203 dpi.
+  */
+  y_tenths = (int)((double)BandStartLine * 254.0 /
+                   (double)header->HWResolution[1] + 0.5);
+
+  printf("{SG;0000,%04d,%04d,%04d,%d,", y_tenths,
+         header->cupsBytesPerLine * 8, BandLines, TEC_GMODE_NIBBLE);
+  fwrite(BandBuffer, 1, BandBytes, stdout);
+  printf("|}\n");
+
+  BandBytes = 0;
+  BandLines = 0;
 }
 
 
