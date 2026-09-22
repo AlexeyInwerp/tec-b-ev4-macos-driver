@@ -45,3 +45,53 @@ If gap detection becomes unreliable after turning `AUTO CALIB.` off — typicall
 after changing to different label stock — run a **manual** calibration once from
 `/cgi-bin/calibrate.cgi` rather than turning the automatic one back on. The
 result is stored, so it survives power cycles without feeding labels every time.
+
+## Media sensors
+
+The B-EV4 has **both sensors built in**, plus a no-sensor mode. You choose which
+one is active; it is not a hardware variant.
+
+| Sensor | How it works | Media it is for |
+| --- | --- | --- |
+| **Transmissive** (gap) | Emitter and receiver sit on **opposite sides** of the paper path. Light shines *through* the media; the label-to-label gap is just liner, so more light gets through and the printer sees a spike. | Die-cut labels on a liner — **the normal case**, incl. 100 × 150 mm |
+| **Reflective** (black mark) | Emitter and receiver sit on the **same side**, below the media. Light bounces off; a black mark printed on the **back** absorbs it and the reflection dips. | Tag stock with black marks |
+| **No sensor** | No detection at all — the printer just feeds the length given by `[ESC]D`. | Continuous receipt-style roll |
+
+Either way the printer prints the length set by the Label Size Set Command, but
+with a sensor active it re-finds the true edge **on every label**, correcting
+drift. With no sensor, small errors accumulate down the roll.
+
+### Selecting it
+
+Three places, in increasing precedence:
+
+1. **On the printer**, which sets the stored default. Power on to online mode,
+   open the cover (the LED goes out), hold **FEED for over 5 seconds** and
+   release — the printer enters sensor selection mode. Then press FEED when the
+   LED shows the one you want:
+
+   | LED | Selects |
+   | --- | --- |
+   | green | reflective |
+   | orange | no sensor |
+   | red | transmissive |
+
+2. **Per queue**, via the PPD's *Media Detection* option (`teMediaTracking`).
+3. **Per job**, via parameter `c` of the Issue Command `[ESC]XS;I,…`.
+
+The driver passes the PPD choice straight through to `c`, so the queue setting
+wins for anything printed through CUPS.
+
+### A mislabelling in the upstream PPD
+
+Toshiba's specification defines parameter `c` as:
+
+```
+0: No sensor          1: Reflective         2: Transmissive
+3: Transmissive       4: Reflective
+```
+
+— i.e. `3` is a second *transmissive* code and `4` a second *reflective* one.
+The upstream `tectpcl2.drv` labelled them the other way round, as "Reflective
+Pre-Print" and "Transmissive Pre-Print", so picking either would have engaged
+the **opposite** sensor. The choices are relabelled here to match the spec.

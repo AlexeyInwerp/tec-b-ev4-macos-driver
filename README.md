@@ -21,6 +21,7 @@ Mac.
 | Verbose debug filter + TPCL decoder | working |
 | LAN / socket printing | working (`socket://<ip>:8000`) |
 | Web UI + CLI administration | working |
+| Media sensor (transmissive / gap) | working |
 
 ## Hardware
 
