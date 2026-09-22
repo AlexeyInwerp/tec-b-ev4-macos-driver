@@ -32,6 +32,10 @@ echo "==> Installing PPDs into $PPD_DIR"
 mkdir -p "$PPD_DIR"
 install -o root -g wheel -m 0644 ppd/*.ppd "$PPD_DIR/"
 
+# Record what was built, so update.sh can tell whether anything changed.
+cat rastertotpcl.c tectpcl2.drv labelmedia.h | shasum -a 256 | cut -d' ' -f1 \
+    > "$FILTER_DIR/.version"
+
 # A URI without ?location= survives replugging into a different port/hub.
 URI="$(lpinfo -v 2>/dev/null | awk '/usb:\/\/TEC/{print $2; exit}')"
 URI="${URI%%\?*}"

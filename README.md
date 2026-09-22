@@ -52,6 +52,37 @@ PPD's `*cupsFilter` line, which is what vendor drivers under `/Library/Printers`
 already do, so the filter is installed to `/Library/Printers/TEC/filter` and
 the PPDs are rewritten to point at it.
 
+## Updating
+
+```sh
+git pull
+sudo driver/update.sh
+```
+
+`update.sh` rebuilds and swaps the filter binaries in place — safe at any time,
+since CUPS exec's the filter per job — and refreshes the installed PPDs. It
+deliberately **leaves your queues alone**, so a tuned darkness or print speed
+survives the update.
+
+If the PPD itself changed (new media sizes, new options), `update.sh` says so
+but does not force it on you, because re-applying a PPD resets queue options
+back to defaults. Note your current settings first, then opt in:
+
+```sh
+lpoptions -p TEC_B_EV4          # what you have now
+sudo APPLY_PPD=1 driver/update.sh
+```
+
+Re-running `sudo driver/install.sh` also works as a blunt update, but it always
+recreates the queue and so always resets those options.
+
+## Uninstalling
+
+```sh
+sudo driver/uninstall.sh                    # filter, PPDs and queues
+KEEP_QUEUES=1 sudo -E driver/uninstall.sh   # leave queues in place
+```
+
 ## Native TPCL toolkit
 
 `tools/tpcl.py` generates TPCL directly — much sharper and far smaller than
