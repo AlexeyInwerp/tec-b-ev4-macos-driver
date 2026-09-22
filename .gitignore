@@ -15,3 +15,11 @@ docs/*.txt
 # Captured debug dumps may contain customer addresses from real labels.
 tpcl-debug/
 *.raster
+
+# Packaging build output
+packaging/stage/
+packaging/dist/
+packaging/scripts/
+packaging/distribution.xml
+packaging/LICENSE
+packaging/welcome.txt

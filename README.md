@@ -32,8 +32,19 @@ Mac.
 
 ## Install
 
+Full instructions, including how to get past Gatekeeper on an unsigned
+package, are in **[docs/INSTALL.md](docs/INSTALL.md)**.
+
+From source — recommended, and avoids Gatekeeper entirely:
+
 ```sh
 sudo driver/install.sh
+```
+
+Or from a release package:
+
+```sh
+sudo installer -pkg TEC-B-EV4-0.1.0.pkg -target /
 ```
 
 This builds the filter, generates the PPDs, installs them, and creates a
