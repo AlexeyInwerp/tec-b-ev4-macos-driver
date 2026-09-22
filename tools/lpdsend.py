@@ -8,7 +8,7 @@ LPD acknowledges every stage and handles full-size jobs correctly.
 
     lpdsend.py <host> <file.tpcl> [queue]
 """
-import socket, sys, time
+import getpass, os, socket, sys, time
 
 if len(sys.argv) < 3:
     sys.exit("usage: lpdsend.py <host> <file.tpcl> [queue]")
@@ -16,7 +16,10 @@ IP    = sys.argv[1]
 path  = sys.argv[2]
 QUEUE = sys.argv[3] if len(sys.argv) > 3 else "lp"
 data = open(path,'rb').read()
-host = "mac"; user = "cups"; jid = 1
+# RFC1179 job ids are 000-999 and must differ between concurrent jobs.
+host = socket.gethostname().split('.')[0][:31] or "host"
+user = getpass.getuser()[:31]
+jid  = os.getpid() % 1000
 
 def ack(s, what):
     r = s.recv(1)
@@ -24,8 +27,8 @@ def ack(s, what):
     print(f"    {what:28} ack={r!r} {'OK' if ok else 'FAIL'}")
     return ok
 
-ctrl = (f"H{host}\n" f"P{user}\n" f"J{path}\n" f"ldfA{jid:03d}{host}\n"
-        f"UdfA{jid:03d}{host}\n" f"N{path}\n").encode()
+ctrl = (f"H{host}\n" f"P{user}\n" f"J{os.path.basename(path)}\n" f"ldfA{jid:03d}{host}\n"
+        f"UdfA{jid:03d}{host}\n" f"N{os.path.basename(path)}\n").encode()
 
 print(f"LPD -> {IP}:515 queue={QUEUE}  ({len(data)} bytes)")
 s = socket.create_connection((IP,515), timeout=60); s.settimeout(60)

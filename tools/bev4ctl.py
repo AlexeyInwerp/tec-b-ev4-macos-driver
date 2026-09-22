@@ -17,9 +17,13 @@ This tool talks to both.
   bev4ctl.py --host 192.168.1.50 feed
   bev4ctl.py --host 192.168.1.50 print label.tpcl
 """
-import argparse, re, socket, sys, urllib.parse
+import argparse, re, socket, subprocess, sys, time, urllib.parse
 
 ESC, TERM = b'\x1b', b'\x0a\x00'
+
+
+def fail(msg):
+    sys.exit(f"bev4ctl: {msg}")
 
 # Detail status codes, B-EV4 interface specification section 9.1.3.
 STATUS = {
@@ -46,18 +50,56 @@ STATUS = {
     "55": "Save mode / SD initialising / EEPROM error",
 }
 
-def sock_cmd(host, port, payload, want_reply=True, timeout=8):
+def sock_cmd(host, port, payload, want_reply=True, timeout=8, expect=0):
+    """Send over the raw socket port. Reads until `expect` bytes or timeout.
+
+    A single recv() can return a short read on TCP, which truncated the 23-byte
+    WB reply and the 31-byte IR reply, so keep reading until we have enough.
+    """
     s = socket.create_connection((host, port), timeout=timeout)
     s.settimeout(timeout)
     s.sendall(payload)
     data = b''
     if want_reply:
-        try:
-            data = s.recv(512)
-        except socket.timeout:
-            pass
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                chunk = s.recv(512)
+            except socket.timeout:
+                break
+            if not chunk:
+                break
+            data += chunk
+            if expect and len(data) >= expect:
+                break
+            if not expect and data.endswith(b'\r\n'):
+                break
     s.close()
     return data
+
+
+def send_via_queue(queue, payload):
+    """Send to a CUPS queue as a raw job - the only path available over USB."""
+    p = subprocess.run(["lp", "-d", queue, "-o", "raw", "-"],
+                       input=payload, capture_output=True)
+    if p.returncode != 0:
+        sys.exit(f"lp failed: {p.stderr.decode(errors='replace').strip()}")
+    return p.stdout.decode(errors="replace").strip()
+
+
+def deliver(a, payload, what):
+    """Write-only delivery over whichever transport was selected."""
+    if a.queue:
+        print(f"{what}: {send_via_queue(a.queue, payload)}")
+    else:
+        sock_cmd(a.host, a.port, payload, want_reply=False)
+        print(f"{what}: sent to {a.host}:{a.port}")
+
+
+def need_host(a, what):
+    if not a.host:
+        sys.exit(f"'{what}' needs network access (--host); "
+                 "it reads from the printer, which USB cannot do here")
 
 
 def http_get(host, path, timeout=20):
@@ -80,7 +122,8 @@ def http_get(host, path, timeout=20):
 
 
 def cmd_status(a):
-    d = sock_cmd(a.host, a.port, ESC + b'WS' + TERM)
+    need_host(a, 'status')
+    d = sock_cmd(a.host, a.port, ESC + b'WS' + TERM, expect=13)
     if not d:
         sys.exit("no reply - is the printer online?")
     # SOH STX <detail:2><type:1><remaining:4> ETX EOT CR LF
@@ -95,7 +138,10 @@ def cmd_status(a):
 
 
 def cmd_info(a):
-    d = sock_cmd(a.host, a.port, ESC + b'IR' + TERM)
+    need_host(a, 'info')
+    d = sock_cmd(a.host, a.port, ESC + b'IR' + TERM, expect=31)
+    if not d:
+        fail(f"no reply from {a.host}:{a.port} - printer online?")
     if len(d) >= 31:
         print(f"model  : {d[:20].decode('ascii','replace').strip()}")
         print(f"serial : {d[20:31].decode('ascii','replace').strip()}")
@@ -111,6 +157,7 @@ def cmd_info(a):
 
 def cmd_params(a):
     """Read stored configuration out of the web UI - TPCL cannot report it."""
+    need_host(a, 'params')
     page = http_get(a.host, '/admin/cgi-bin/parameter.cgi')
     rows = re.findall(r'<TD>([^<]{0,40}?)\s*:\s*</TD><TD>(.*?)</TD>', page, re.S | re.I)
     if not rows:
@@ -130,27 +177,51 @@ def cmd_params(a):
 
 
 def cmd_feed(a):
-    sock_cmd(a.host, a.port, ESC + b'T' + TERM, want_reply=False)
-    print("feed command sent")
+    deliver(a, ESC + b'T' + TERM, "feed")
+
+
+def cmd_reset(a):
+    """[ESC]WR re-initialises the printer and clears an error state.
+
+    Worth knowing: once the printer reports an error it processes only status
+    and reset commands, silently discarding everything else - so a stuck job
+    makes every later job look like it vanished.
+    """
+    deliver(a, ESC + b'WR' + TERM, "reset")
+    print("  allow ~10s for re-initialisation")
 
 
 def cmd_print(a):
     data = open(a.file, 'rb').read()
-    sock_cmd(a.host, a.port, data, want_reply=False)
-    print(f"sent {len(data)} bytes to {a.host}:{a.port}")
+    deliver(a, data, f"{len(data)} bytes")
 
 
 def main():
-    p = argparse.ArgumentParser(description="Toshiba TEC B-EV4 administration")
-    p.add_argument('--host', required=True)
+    p = argparse.ArgumentParser(
+        description="Toshiba TEC B-EV4 administration",
+        epilog="Over USB only --queue works, and only for commands that write. "
+               "Reading settings needs the web UI, so either put the printer on "
+               "the LAN or use the printer's own system mode - see docs/parameters.md.")
+    p.add_argument('--host', help="printer IP (network: full read/write)")
+    p.add_argument('--queue', help="CUPS queue name (USB: write-only)")
     p.add_argument('--port', type=int, default=8000)
     sub = p.add_subparsers(dest='cmd', required=True)
     for name, fn in (("status", cmd_status), ("info", cmd_info),
-                     ("params", cmd_params), ("feed", cmd_feed)):
+                     ("params", cmd_params), ("feed", cmd_feed),
+                     ("reset", cmd_reset)):
         sub.add_parser(name).set_defaults(fn=fn)
     sp = sub.add_parser("print"); sp.add_argument("file"); sp.set_defaults(fn=cmd_print)
     a = p.parse_args()
-    a.fn(a)
+    if not a.host and not a.queue:
+        p.error("give --host (network) or --queue (USB)")
+    try:
+        a.fn(a)
+    except (ConnectionRefusedError, OSError) as e:
+        fail(f"cannot reach {a.host or a.queue}: {e.strerror or e}\n"
+             "        printer powered off, or its DHCP lease moved? "
+             "re-scan with:  nmap -p 80,515,8000 <subnet> --open")
+    except KeyboardInterrupt:
+        fail("interrupted")
 
 
 if __name__ == '__main__':

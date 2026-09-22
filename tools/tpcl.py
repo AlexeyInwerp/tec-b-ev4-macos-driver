@@ -44,11 +44,15 @@ class Label:
         return self.line(x0, y0, x1, y1, width_dots, rect=True, radius=radius)
 
     def text(self, n, x, y, data, font=b'H', hmag=1, vmag=1, rot='00', attr=b'B'):
-        """[ESC] PCaaa; bbbb,cccc,d,e,ff,ii,j   then  [ESC] RCaaa; data"""
+        """[ESC] PCaaa; bbbb,cccc,d,e,ff,ii,j   then  [ESC] RCaaa; data
+
+        Text is encoded cp850, matching the printer's default FONT CODE
+        parameter. Change both together if you set a different code page.
+        """
         self.cmd(b'PC%03d;%04d,%04d,%d,%d,%s,%s,%s' % (
             n, x, y, hmag, vmag, font, rot.encode(), attr))
         if isinstance(data, str):
-            data = data.encode('cp437', 'replace')
+            data = data.encode('cp850', 'replace')
         self.cmd(b'RC%03d;' % n + data)
         return self
 

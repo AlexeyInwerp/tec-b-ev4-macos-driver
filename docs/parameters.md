@@ -95,3 +95,51 @@ Toshiba's specification defines parameter `c` as:
 The upstream `tectpcl2.drv` labelled them the other way round, as "Reflective
 Pre-Print" and "Transmissive Pre-Print", so picking either would have engaged
 the **opposite** sensor. The choices are relabelled here to match the spec.
+
+## Changing settings when the printer is on USB
+
+The parameter page lives on the printer's **web server**, which only exists on
+the LAN interface. On USB there is no web UI, and TPCL offers no command to
+*read* parameters back — only `[ESC]Z2;1`, which rewrites all of them
+positionally in one shot. Writing that blind, without knowing the current
+values, risks changing the destination or control-code mode and losing
+communication with the printer.
+
+So `bev4ctl params` requires `--host`. Over USB (`--queue`) only the commands
+that write are available: `feed`, `reset`, `print`.
+
+Three ways to configure a USB-attached printer:
+
+### 1. Read the settings from a self-test print
+
+The printer prints its own parameters. Power it on **holding FEED**, and
+release at the right point in the LED sequence — each step lasts 1.5 s:
+
+| Step | LED | Release here for |
+| --- | --- | --- |
+| 1 | flashing red | — |
+| 2 | flashing red | firmware download |
+| 3 | flashing orange | cancel auto-call |
+| 4 | solid orange | **parameter clearance** (factory reset) |
+| 5 | solid red | **sensor calibration** (also measures label length) |
+| 6 | solid green | **self-test print, then dump mode** |
+
+Step 6 prints the program version, checksum and every parameter with its
+current value. Step 5 is the manual sensor calibration to run after turning
+`AUTO CALIB.` off.
+
+Note step 6 leaves the printer in **dump mode**, where it prints received data
+instead of interpreting it. That is genuinely useful for debugging a job, but
+power-cycle to get out of it.
+
+### 2. Put it on the LAN temporarily
+
+Even a direct cable to a laptop works. Configure it with `tools/netconfig.py`
+over USB, use the web UI, then move it back. See the LAN section of the README.
+
+### 3. Write the whole parameter block deliberately
+
+If you know every current value — from a self-test print — you can send
+`[ESC]Z2;1` followed by `[ESC]Z0` to re-initialise. This project does not wrap
+that command, on purpose: a partially-correct parameter block is worse than no
+change at all, and the two safe routes above already exist.

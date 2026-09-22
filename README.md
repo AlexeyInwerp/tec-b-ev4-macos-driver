@@ -250,6 +250,21 @@ Things that did **not** fix it, in case you are tempted:
 The identical byte streams print correctly over USB, and over LPD. It is the
 raw-socket implementation in the print server that is at fault, nothing else.
 
+### Reserve the address
+
+The printer has no mDNS, so nothing rediscovers it if its address changes — and
+a DHCP lease *will* eventually move. When it does, the CUPS queue keeps pointing
+at the old address and every job fails; during development the lease jumped from
+`…135` to `…163` mid-session and broke the queue exactly this way.
+
+Give it a **DHCP reservation** on your router, or a static address via
+`tools/lan-setup.sh --ip <address>`. If it does go missing:
+
+```sh
+nmap -p 80,515,8000 192.168.1.0/24 --open    # B-EV4 answers on all three
+lpadmin -p TEC_B_EV4_NET -v lpd://<new-ip>/lp
+```
+
 ### Sending to LPD directly
 
 `tools/lpdsend.py` is a minimal RFC 1179 client, useful for testing without
