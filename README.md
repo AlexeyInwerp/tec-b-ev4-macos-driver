@@ -193,34 +193,103 @@ lp -d TEC_B_EV4 -o raw /tmp/tpcl-debug/<stamp>.tpcl   # replay
 
 ## Network (LAN) printing
 
-The B-EV4's LAN interface speaks **raw socket** and **LPR**. Note the socket
-port defaults to **8000**, not the usual 9100.
+The B-EV4's LAN interface speaks **raw socket** (default port **8000**, not the
+usual 9100), **LPR** on 515, and serves a **web UI on port 80**.
 
-Factory defaults: IP `192.168.10.20`, mask `255.255.255.0`, gateway `0.0.0.0`,
-socket enabled on port `8000`.
-
-Configure it over USB first with `tools/netconfig.py`, which emits the
-`[ESC]IP` / `[ESC]IH` / `[ESC]IS` commands:
+Once it has an address on your subnet:
 
 ```sh
-# static address
-tools/netconfig.py --ip 192.168.1.50 --mask 255.255.255.0 --gw 192.168.1.1 > net.tpcl
-# or DHCP
-tools/netconfig.py --dhcp > net.tpcl
-
-lp -d TEC_B_EV4 -o raw net.tpcl     # then POWER-CYCLE the printer
-```
-
-Then point a queue at it — same PPD, no USB involved:
-
-```sh
-lpadmin -p TEC_B_EV4_NET -E -v socket://192.168.1.50:8000 \
+lpadmin -p TEC_B_EV4_NET -E -v socket://192.168.178.135:8000 \
         -P driver/ppd/tecbev4d.ppd \
         -o PageSize=w283h425 -o teMediaTracking=2 -o MediaType=Direct \
         -o Resolution=203dpi -o Gap=2
 ```
 
-Network is generally *more* reliable than USB here — see the USB note below.
+### The problem: a factory-fresh unit is invisible on your network
+
+This is the part that costs an afternoon, so it is worth stating plainly.
+
+The printer ships with a **static IP of `192.168.10.20`**. Almost nobody runs
+that subnet, so when you plug it into a typical LAN:
+
+* it does **not** appear in a ping sweep or an ARP scan of your subnet;
+* it does **not** appear in Bonjour — the B-EV4 has no mDNS at all, so
+  "Add Printer" will never find it;
+* the **link LED is green and blinking**, which makes the cabling look fine —
+  and it *is* fine. The printer is on the wire, just on a different subnet;
+* its web UI is unreachable, so you cannot use the web UI to fix the web UI.
+
+That last point is the trap: every on-printer configuration surface is behind
+an IP address the printer does not yet have on your network.
+
+### Three ways out, in order of preference
+
+**1. Over USB** — the reliable one. `netconfig.py` emits the configuration
+commands; send them with `lp -o raw`, then power-cycle:
+
+```sh
+tools/netconfig.py --dhcp > net.tpcl
+lp -d <usb-queue> -o raw net.tpcl
+```
+
+It writes only to stdout, so nothing reaches the printer unless you pipe it
+there. The 53 bytes it produces are `[ESC]IH;1,FF…` (enable DHCP, use the MAC
+as the client ID) and `[ESC]IS;1,08000` (keep socket printing enabled).
+
+**2. Over the LAN, without touching any cable** — `lan-setup.sh` reaches the
+printer *on its own subnet* by giving your Mac a temporary second address
+there:
+
+```sh
+sudo tools/lan-setup.sh --dhcp          # or: --ip 192.168.178.60
+```
+
+It adds `192.168.10.99/24` to your default interface, sends `[ESC]WS` first and
+**refuses to continue unless a TPCL printer answers** — an HTTP reply is
+rejected explicitly, because a NAS on port 8000 looked like a candidate during
+development — then removes the alias from an `EXIT` trap, so a failure cannot
+leave your interface modified.
+
+**3. When you do not know where it is at all** — `lan-find.sh` listens
+passively instead of probing:
+
+```sh
+sudo tools/lan-find.sh 30      # power-cycle the printer while it listens
+```
+
+A ping sweep cannot see a host on a foreign subnet, but that host still
+chatters. This captures ARP/DHCP/ICMP and reports any MAC that is not a known
+neighbour, flagging Toshiba TEC OUIs and off-subnet addresses. It separates the
+three failure modes that otherwise look identical:
+
+| Observation | Meaning |
+| --- | --- |
+| Toshiba MAC sending DHCP DISCOVER, no reply | DHCP works; your server is not leasing to it |
+| Toshiba MAC using `192.168.10.x` | Still on the factory static |
+| No Toshiba MAC at all | Not on your segment, despite the link LED |
+
+After any of these, **power-cycle the printer** — network settings only take
+effect at initialisation.
+
+### Finding it afterwards
+
+Scan for the port signature rather than by name; there is no mDNS to find:
+
+```sh
+# the B-EV4 answers on 515 (LPD), 8000 (socket) and 80 (web UI)
+nmap -p 80,515,8000 192.168.178.0/24 --open
+```
+
+Confirm identity without printing anything — `[ESC]IR` returns model and
+serial:
+
+```sh
+tools/bev4ctl.py --host <ip> info
+```
+
+> A port scan limited to the usual printer ports (515/631/9100) will miss the
+> **web UI on port 80** entirely. Include 80, or you will conclude the printer
+> has no management interface when it has a full one.
 
 ## A note on USB stability
 
