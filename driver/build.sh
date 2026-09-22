@@ -5,14 +5,42 @@ cd "$(dirname "$0")"
 
 FILTER_DIR="${FILTER_DIR:-/Library/Printers/TEC/filter}"
 
+# Build a universal binary by default so one install works on both Apple
+# Silicon and Intel. arm64 cannot target below 11.0 (Apple Silicon did not
+# exist earlier), so each slice gets its own floor.
+UNIVERSAL="${UNIVERSAL:-1}"
+MACOS_MIN_X86="${MACOS_MIN_X86:-10.15}"   # Catalina
+MACOS_MIN_ARM="${MACOS_MIN_ARM:-11.0}"    # Big Sur
+
+WARN="-Wall -Wno-deprecated-declarations -Wno-format-extra-args -Wno-unused-but-set-variable"
+
 echo "==> Compiling rastertotpcl ..."
-clang -Os -Wall -Wno-deprecated-declarations -Wno-format-extra-args \
-      -Wno-unused-but-set-variable \
-      -o rastertotpcl rastertotpcl.c -lcups -lcupsimage
+if [ "$UNIVERSAL" = "1" ] && clang -target "x86_64-apple-macos$MACOS_MIN_X86" \
+        -Os $WARN -c rastertotpcl.c -o /dev/null 2>/dev/null; then
+  clang -arch x86_64 -mmacosx-version-min="$MACOS_MIN_X86" -Os $WARN \
+        -o rastertotpcl.x86_64 rastertotpcl.c -lcups -lcupsimage
+  clang -arch arm64  -mmacosx-version-min="$MACOS_MIN_ARM" -Os $WARN \
+        -o rastertotpcl.arm64  rastertotpcl.c -lcups -lcupsimage
+  lipo -create -output rastertotpcl rastertotpcl.x86_64 rastertotpcl.arm64
+  rm -f rastertotpcl.x86_64 rastertotpcl.arm64
+  echo "    universal: $(lipo -archs rastertotpcl) (x86_64 >= $MACOS_MIN_X86, arm64 >= $MACOS_MIN_ARM)"
+else
+  clang -Os $WARN -o rastertotpcl rastertotpcl.c -lcups -lcupsimage
+  echo "    native only: $(lipo -archs rastertotpcl 2>/dev/null || uname -m)"
+fi
 
 echo "==> Generating PPDs ..."
 rm -rf ppd ppd-debug
-ppdc tectpcl2.drv 2>&1 | grep -v "Unable to find #po file" || true
+if command -v ppdc >/dev/null 2>&1; then
+  ppdc tectpcl2.drv 2>&1 | grep -v "Unable to find #po file" || true
+elif [ -d ppd-prebuilt ]; then
+  # ppdc was removed from some systems; fall back to the checked-in PPDs.
+  echo "    ppdc not found - using prebuilt PPDs"
+  cp -r ppd-prebuilt ppd
+else
+  echo "!! ppdc not found and no ppd-prebuilt/ directory" >&2
+  exit 1
+fi
 
 # The macOS system volume is sealed read-only, so the filter cannot be placed
 # in /usr/libexec/cups/filter. CUPS accepts an absolute path in *cupsFilter,

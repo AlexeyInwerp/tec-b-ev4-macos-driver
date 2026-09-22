@@ -138,6 +138,8 @@ A related setting, **`Forward Wait`** (`i`, "forward feed standby after an
 issue"), makes the printer advance 16.3 mm after issuing; turn that off too if
 you see a feed *after* printing rather than at startup.
 
+Porting notes for older macOS and Windows: **[docs/porting.md](docs/porting.md)**.
+
 Every parameter is documented in **[docs/parameters.md](docs/parameters.md)**,
 including which ones the B-EV4 ignores entirely and one that will silently
 break this project if changed.
