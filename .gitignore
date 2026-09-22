@@ -1,0 +1,17 @@
+# Build artefacts
+driver/rastertotpcl
+driver/ppd/
+driver/ppd-debug/
+driver/*.orig
+tools/*.tpcl
+tools/__pycache__/
+
+# Toshiba TEC's "B-EV4 Series External Equipment Interface Specification" is
+# Toshiba TEC's copyrighted documentation and is NOT redistributed here.
+# Download it yourself - see docs/README.md.
+docs/*.pdf
+docs/*.txt
+
+# Captured debug dumps may contain customer addresses from real labels.
+tpcl-debug/
+*.raster

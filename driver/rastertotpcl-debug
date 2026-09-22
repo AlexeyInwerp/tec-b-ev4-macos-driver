@@ -1,0 +1,42 @@
+#!/bin/bash
+# Verbose development wrapper around the rastertotpcl CUPS filter.
+#
+# Logs the full filter invocation to stderr (CUPS error_log at LogLevel debug)
+# and tees both the incoming CUPS raster and the outgoing TPCL to a dump
+# directory, so a job can be replayed and decoded without a printer attached.
+#
+#   Dumps:  $TPCL_DUMP_DIR (default /tmp/tpcl-debug)
+#   Replay: lp -d <queue> -o raw /tmp/tpcl-debug/<stamp>.tpcl
+#   Decode: tools/tpcldecode.py /tmp/tpcl-debug/<stamp>.tpcl
+
+DUMP_DIR="${TPCL_DUMP_DIR:-/tmp/tpcl-debug}"
+mkdir -p "$DUMP_DIR" 2>/dev/null || DUMP_DIR=/tmp
+STAMP="$(date +%Y%m%d-%H%M%S)-$$"
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+{
+  echo "DEBUG: ===== rastertotpcl-debug $STAMP ====="
+  echo "DEBUG: argc=$#  job=$1 user=$2 title=$3 copies=$4"
+  echo "DEBUG: options=$5"
+  echo "DEBUG: file=${6:-<stdin>}"
+  echo "DEBUG: uid=$(id -u) gid=$(id -g) cwd=$PWD"
+  for v in PPD PRINTER CONTENT_TYPE FINAL_CONTENT_TYPE CUPS_SERVERBIN CUPS_DATADIR; do
+    echo "DEBUG: env $v=${!v}"
+  done
+} >&2
+
+RASTER="$DUMP_DIR/$STAMP.raster"
+TPCL="$DUMP_DIR/$STAMP.tpcl"
+
+# Tee the raster in, run the real filter, tee the TPCL out.
+tee "$RASTER" | "$SELF_DIR/rastertotpcl" "$@" | tee "$TPCL"
+rc=${PIPESTATUS[1]}
+
+{
+  echo "DEBUG: rastertotpcl exit=$rc"
+  echo "DEBUG: raster in  = $RASTER ($(wc -c <"$RASTER" 2>/dev/null | tr -d ' ') bytes)"
+  echo "DEBUG: tpcl   out = $TPCL ($(wc -c <"$TPCL" 2>/dev/null | tr -d ' ') bytes)"
+  # Summarise the command stream without dumping binary graphic payloads.
+  echo "DEBUG: commands: $(grep -aoE '\{[A-Z]{1,2}[0-9]?[;,]' "$TPCL" 2>/dev/null | sort | uniq -c | tr '\n' ' ')"
+} >&2
+exit "$rc"
