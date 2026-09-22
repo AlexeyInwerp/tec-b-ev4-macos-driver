@@ -21,6 +21,9 @@ NAMES = {
     'IB': 'Eject/cut',               'XR': 'Clear area',
     'XJ': 'Comment/annotation',      'U1': 'Forward feed',
     'U2': 'Reverse feed',            'WX': 'Status request',
+    'IP': 'IP address set',          'IS': 'Socket comms port set',
+    'IH': 'DHCP function set',       'IG': 'Printer info store',
+    'WS': 'Status//mode select',     'RM': 'Ribbon motor adjust',
 }
 
 

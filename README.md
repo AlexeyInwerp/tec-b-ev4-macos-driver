@@ -19,6 +19,7 @@ Mac.
 | TOPIX graphics compression | working (~12:1 on a real shipping label) |
 | 100 × 150 mm direct thermal | working, default media |
 | Verbose debug filter + TPCL decoder | working |
+| LAN / socket printing | config tool written, not yet tested on hardware |
 
 ## Hardware
 
@@ -104,6 +105,50 @@ lp -d TEC_B_EV4 -o raw /tmp/tpcl-debug/<stamp>.tpcl   # replay
    `?location=…`, which breaks whenever the printer is replugged into a
    different port or hub.
 6. **Verbose debug filter** and a **TPCL decoder** for offline diagnosis.
+
+## Network (LAN) printing
+
+The B-EV4's LAN interface speaks **raw socket** and **LPR**. Note the socket
+port defaults to **8000**, not the usual 9100.
+
+Factory defaults: IP `192.168.10.20`, mask `255.255.255.0`, gateway `0.0.0.0`,
+socket enabled on port `8000`.
+
+Configure it over USB first with `tools/netconfig.py`, which emits the
+`[ESC]IP` / `[ESC]IH` / `[ESC]IS` commands:
+
+```sh
+# static address
+tools/netconfig.py --ip 192.168.1.50 --mask 255.255.255.0 --gw 192.168.1.1 > net.tpcl
+# or DHCP
+tools/netconfig.py --dhcp > net.tpcl
+
+lp -d TEC_B_EV4 -o raw net.tpcl     # then POWER-CYCLE the printer
+```
+
+Then point a queue at it — same PPD, no USB involved:
+
+```sh
+lpadmin -p TEC_B_EV4_NET -E -v socket://192.168.1.50:8000 \
+        -P driver/ppd/tecbev4d.ppd \
+        -o PageSize=w283h425 -o teMediaTracking=2 -o MediaType=Direct \
+        -o Resolution=203dpi -o Gap=2
+```
+
+Network is generally *more* reliable than USB here — see the USB note below.
+
+## A note on USB stability
+
+During development this printer repeatedly dropped off the USB bus when
+connected through a chained hub, re-enumerating at a different location ID each
+time (`?location=1130000` -> `130000` -> `1100000`). A queue pinned to
+`usb://TEC/B-EV4-G?location=...` goes "offline" the moment that happens, and
+queued jobs stall until the URI is corrected.
+
+Two mitigations:
+
+* Connect the printer **directly to the machine**, not through a hub chain.
+* Or use the LAN interface, which has no such problem.
 
 ## Credits and licensing
 
