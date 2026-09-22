@@ -19,7 +19,8 @@ Mac.
 | TOPIX graphics compression | working (~12:1 on a real shipping label) |
 | 100 × 150 mm direct thermal | working, default media |
 | Verbose debug filter + TPCL decoder | working |
-| LAN / socket printing | config tool written, not yet tested on hardware |
+| LAN / socket printing | working (`socket://<ip>:8000`) |
+| Web UI + CLI administration | working |
 
 ## Hardware
 
@@ -82,6 +83,59 @@ recreates the queue and so always resets those options.
 sudo driver/uninstall.sh                    # filter, PPDs and queues
 KEEP_QUEUES=1 sudo -E driver/uninstall.sh   # leave queues in place
 ```
+
+## Printer administration
+
+The B-EV4 has **two independent management surfaces**, and they expose
+different things:
+
+| Surface | Port | Gives you |
+| --- | --- | --- |
+| TPCL raw socket | 8000 | live status, model, serial, feed, printing |
+| Embedded web server (`Ethernut`) | 80 | the **stored configuration** — parameters, calibration, network, password |
+
+TPCL has no command to read parameters back — only `[ESC]Z2;1`, which writes
+all of them positionally at once. The web UI is therefore the only safe way to
+see the current configuration.
+
+`tools/bev4ctl.py` talks to both:
+
+```sh
+bev4ctl.py --host 192.168.178.135 status   # live state + remaining count
+bev4ctl.py --host 192.168.178.135 info     # model, serial, firmware, mileage
+bev4ctl.py --host 192.168.178.135 params   # stored configuration
+bev4ctl.py --host 192.168.178.135 feed
+bev4ctl.py --host 192.168.178.135 print label.tpcl
+```
+
+The web UI lives at `http://<printer-ip>/` and its pages are:
+
+| Page | Path |
+| --- | --- |
+| Status | `/cgi-bin/status.cgi` |
+| Parameter | `/admin/cgi-bin/parameter.cgi` |
+| Calibration | `/cgi-bin/calibrate.cgi` |
+| Network | `/cgi-bin/network.cgi` |
+| Function | `/cgi-bin/function.cgi` |
+| Password | `/admin/cgi-bin/password.cgi` |
+
+Note the server answers some `/admin/` paths in bare **HTTP/0.9** with no status
+line, which makes `curl` refuse them unless you pass `--http0.9`. `bev4ctl.py`
+parses both forms.
+
+### Stopping the label feed at every power-on
+
+If the printer feeds several labels each time it starts, the cause is the
+**`AUTO CALIB.`** parameter (`v` in `[ESC]Z2;1`, "automatic sensor calibration
+— ON with current sensor when power on"). Its factory default is OFF; when it
+is ON the printer feeds media at power-up to sample the gap sensor.
+
+Set **AUTO CALIB.** to **OFF** at `/admin/cgi-bin/parameter.cgi`, press *Set*,
+and power-cycle. `bev4ctl.py params` reports the current value.
+
+A related setting, **`Forward Wait`** (`i`, "forward feed standby after an
+issue"), makes the printer advance 16.3 mm after issuing; turn that off too if
+you see a feed *after* printing rather than at startup.
 
 ## Native TPCL toolkit
 
