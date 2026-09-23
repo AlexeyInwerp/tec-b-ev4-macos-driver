@@ -11,7 +11,7 @@ oversampled and box-filtered down, which is enough anti-aliasing at icon sizes.
 """
 import os, struct, sys, zlib
 
-SS = 4  # supersampling factor
+SS = 2  # supersampling factor
 
 
 class Canvas:
@@ -53,10 +53,37 @@ class Canvas:
                 if ((xx-cx)/rx)**2 + ((yy-cy)/ry)**2 <= 1.0:
                     self._blend(xx, yy, c)
 
+    def vgrad_rrect(self, x, y, w, h, rad, top, bot):
+        """Rounded rect with a vertical gradient - gives the body some form."""
+        rad = min(rad, w/2, h/2)
+        for yy in range(int(y), int(y+h)):
+            t = (yy - y) / max(h - 1, 1)
+            c = tuple(int(top[i] + (bot[i]-top[i])*t) for i in range(3)) + (255,)
+            for xx in range(int(x), int(x+w)):
+                dx = min(xx - (x+rad), 0) or max(xx - (x+w-1-rad), 0)
+                dy = min(yy - (y+rad), 0) or max(yy - (y+h-1-rad), 0)
+                if dx*dx + dy*dy <= rad*rad:
+                    self._blend(xx, yy, c)
+
+    def shadow(self, x, y, w, h, rad, spread, alpha, steps=5):
+        """Soft shadow from a few offset rounded rects.
+
+        Deliberately only a handful of passes: each one is a full per-pixel
+        fill in Python, so a true blur here costs minutes at 1024px.
+        """
+        for i in range(steps, 0, -1):
+            off = spread * i / steps
+            a = int(alpha / steps)
+            if a < 1:
+                continue
+            self.rrect(x - off, y - off + spread*0.35,
+                       w + 2*off, h + 2*off, rad + off, (0, 0, 0, a))
+
     def downsample(self, factor):
         m = self.n // factor
         out = bytearray(m * m * 4)
         f2 = factor * factor
+        px = self.px
         for y in range(m):
             for x in range(m):
                 r = g = b = a = 0
@@ -64,10 +91,12 @@ class Canvas:
                     row = (y*factor + dy) * self.n
                     for dx in range(factor):
                         i = (row + x*factor + dx) * 4
-                        r += self.px[i]; g += self.px[i+1]
-                        b += self.px[i+2]; a += self.px[i+3]
+                        av = px[i+3]
+                        r += px[i]*av; g += px[i+1]*av; b += px[i+2]*av
+                        a += av
                 j = (y*m + x) * 4
-                out[j:j+4] = bytes((r//f2, g//f2, b//f2, a//f2))
+                if a:
+                    out[j:j+4] = bytes((r//a, g//a, b//a, a//f2))
         c = Canvas(m); c.px = out
         return c
 
@@ -84,15 +113,18 @@ class Canvas:
             f.write(chunk(b'IEND', b''))
 
 
-BODY   = (51, 56, 66, 255)
-SLOT   = (20, 23, 28, 255)
-PAPER  = (255, 255, 255, 255)
-EDGE   = (184, 189, 199, 255)
-INK    = (28, 31, 36, 255)
-FAINT  = (115, 120, 133, 255)
-GREEN  = (64, 204, 107, 255)
-BUTTON = (97, 105, 120, 255)
-VENT   = (77, 84, 97, 255)
+BODY_TOP = (74, 82, 98)          # gradient, lighter at the top
+BODY_BOT = (38, 43, 54)
+HILITE   = (104, 113, 132, 255)
+SLOT     = (18, 21, 26, 255)
+SLOT_LIP = (9, 11, 14, 255)
+PAPER    = (255, 255, 255, 255)
+EDGE     = (170, 176, 189, 255)
+INK      = (26, 29, 34, 255)
+FAINT    = (132, 138, 152, 255)
+GREEN    = (56, 190, 100, 255)
+BUTTON   = (112, 121, 138, 255)
+VENT     = (92, 100, 116, 255)
 
 
 def render(px):
@@ -101,31 +133,39 @@ def render(px):
     c = Canvas(n)
     U = lambda v: v * n            # unit -> pixels
 
-    # Label emerging from the top
-    c.rrect(U(.26), U(.10), U(.48), U(.34), U(.02), PAPER)
-    c.rrect(U(.26), U(.10), U(.48), U(.005), U(.002), EDGE)
+    # --- label, emerging from the top -----------------------------------
+    lx, ly, lw, lh = .275, .055, .45, .40
+    c.rrect(U(lx), U(ly), U(lw), U(lh), U(.012), PAPER)
+    # full border, not just a top edge
+    c.rrect(U(lx), U(ly), U(lw), U(lh), U(.012), EDGE)
+    c.rrect(U(lx) + U(.006), U(ly) + U(.006), U(lw) - U(.012), U(lh) - U(.012),
+            U(.008), PAPER)
 
-    # Barcode: varied bar widths so it reads as one
-    x, unit = .305, .0125
-    for w in (1, 2, 1, 3, 1, 1, 2, 1, 3, 2, 1, 1):
-        if x + w*unit > .695:
+    # barcode, with quiet zones either side
+    x, unit = lx + .055, .0115
+    for w in (2, 1, 1, 3, 1, 2, 1, 1, 3, 1, 2, 1, 1, 2):
+        if x + w*unit > lx + lw - .055:
             break
-        c.rect(U(x), U(.145), U(w*unit), U(.145), INK)
+        c.rect(U(x), U(ly + .055), U(w*unit), U(.155), INK)
         x += w*unit + unit
-    # Text lines beneath
-    c.rect(U(.305), U(.322), U(.30), U(.022), FAINT)
-    c.rect(U(.305), U(.360), U(.20), U(.022), FAINT)
+    # human-readable lines beneath
+    c.rect(U(lx + .055), U(ly + .235), U(.24), U(.020), FAINT)
+    c.rect(U(lx + .055), U(ly + .275), U(.16), U(.020), FAINT)
 
-    # Printer body
-    c.rrect(U(.13), U(.41), U(.74), U(.42), U(.06), BODY)
-    # Exit slot
-    c.rrect(U(.22), U(.43), U(.56), U(.045), U(.02), SLOT)
-    # Status light, feed button
-    c.ellipse(U(.246), U(.695), U(.031), U(.031), GREEN)
-    c.ellipse(U(.350), U(.695), U(.025), U(.025), BUTTON)
-    # Vents
+    # --- printer body ----------------------------------------------------
+    bx, by, bw, bh = .105, .40, .79, .455
+    c.vgrad_rrect(U(bx), U(by), U(bw), U(bh), U(.075), BODY_TOP, BODY_BOT)
+    # exit slot, recessed
+    c.rrect(U(.185), U(.425), U(.63), U(.052), U(.024), SLOT)
+    c.rrect(U(.185), U(.425), U(.63), U(.014), U(.007), SLOT_LIP)
+
+    # --- controls --------------------------------------------------------
+    c.ellipse(U(.205), U(.705), U(.028), U(.028), GREEN)
+    c.ellipse(U(.300), U(.705), U(.026), U(.026), BUTTON)
+
+    # vents
     for i in range(4):
-        c.rect(U(.60), U(.60 + i*.038), U(.19), U(.018), VENT)
+        c.rect(U(.60), U(.615 + i*.042), U(.205), U(.020), VENT)
 
     return c.downsample(SS)
 
@@ -138,10 +178,13 @@ def main():
              ("icon_128x128", 128), ("icon_128x128@2x", 256),
              ("icon_256x256", 256), ("icon_256x256@2x", 512),
              ("icon_512x512", 512), ("icon_512x512@2x", 1024)]
-    cache = {}
+    # Render once at the largest size, then halve repeatedly. Far cheaper than
+    # rendering each size, and keeps them visually identical.
+    master = render(1024)
+    cache = {1024: master}
+    for px in (512, 256, 128, 64, 32, 16):
+        cache[px] = cache[px*2].downsample(2)
     for name, px in sizes:
-        if px not in cache:
-            cache[px] = render(px)
         cache[px].png(os.path.join(out, name + ".png"))
         print(f"  {name}.png")
     print(f"wrote {len(sizes)} sizes to {out}")

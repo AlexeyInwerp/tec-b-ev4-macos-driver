@@ -34,8 +34,6 @@ Copyright "You should have received a copy of the GNU General Public License"
 Copyright "along with this program.  If not, see <http://www.gnu.org/licenses/>."
 Copyright ""
 Copyright "" 
-Attribute "Product" "" "(GNU Ghostscript)"
-Attribute "Product" "" "(ESP Ghostscript)"
 Attribute "cupsVersion" "" "1.2"
 Attribute "cupsManualCopies" "" "False"
 Attribute "PSVersion" "" "(3010.000) 81501"
@@ -49,8 +47,8 @@ ModelNumber 0x00
 ColorDevice No
 Throughput 8
 Manufacturer "Toshiba Tec"
-Installable "Cutter/Cutter"
-Installable "Peel/Peel Off"
+Installable "Cutter/Cutter unit (accessory)"
+Installable "Peel/Strip-off module (accessory)"
 UIconstraints "*Cutter False *teCutter 1"
 UIconstraints "*Cutter False *teCutter 2"
 UIconstraints "*Cutter False *tePrintMode 3"
@@ -60,6 +58,12 @@ UIConstraints "*tePrintMode 1 *teCutter 1"
 Font *
 // Icon shown in Printers & Scanners and the Add Printer browser.
 Attribute "APPrinterIconPath" "" "/Library/Printers/TEC/TECBEV4.icns"
+
+// Lets macOS match the driver to the printer automatically over USB.
+// Network (LPD) cannot be auto-matched: the B-EV4 has neither Bonjour nor
+// SNMP, so there is nothing for macOS to query - see docs/INSTALL.md.
+Attribute "1284DeviceID" "" "MFG:TEC;MDL:B-EV4-G;CMD:TPCL;"
+Attribute "Product" "" "(B-EV4)"
 
 // Filter provided by the driver...
 Filter application/vnd.cups-raster 50 rastertotpcl

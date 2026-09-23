@@ -21,6 +21,7 @@ Mac.
 | Verbose debug filter + TPCL decoder | working |
 | LAN printing | working via **LPD** (`lpd://<ip>/lp`); raw socket is broken |
 | Web UI + CLI administration | working |
+| Driver auto-selected over USB | working (`*1284DeviceID`); network cannot — no SNMP/mDNS |
 | Media sensor (transmissive / gap) | working |
 
 ## Hardware

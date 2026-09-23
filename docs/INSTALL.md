@@ -112,9 +112,29 @@ thermal-transfer model).
 obvious-looking "HP Jetdirect - Socket" option is the one to avoid: it silently
 discards jobs over a few kilobytes while reporting success.
 
-**2. You will usually have to type the address in by hand.** The B-EV4 has no
-Bonjour/mDNS, so it never appears in the automatic browse list however long you
-wait. Use the **IP** tab and enter the address.
+**2. You will have to type the address in, and pick the driver yourself.** The
+B-EV4 has no Bonjour/mDNS, so it never appears in the automatic browse list
+however long you wait. Use the **IP** tab and enter the address.
+
+macOS will then leave "Use" set to *Generic PostScript Printer* rather than
+suggesting this driver. That is not a fault in the driver, and it cannot be
+fixed from this end:
+
+> To suggest a driver, macOS has to ask the printer what it is. Over the
+> network it does that with **Bonjour** or **SNMP**. The B-EV4 answers on
+> ports 80, 515 and 8000 only — no mDNS, no SNMP on 161 — so there is nothing
+> to ask, and nothing to match a driver against.
+
+Set **Use → Select Software…** and choose **Toshiba Tec B-EV4D-GS14**
+(or `…B-EV4T-GS14` for a 300 dpi thermal-transfer model). Typing "B-EV4" in the
+search box finds it.
+
+Over **USB** it is different: the printer reports an IEEE-1284 device ID, the
+PPD declares a matching `*1284DeviceID`, and macOS selects the driver by itself.
+
+Leaving it on Generic PostScript will *appear* to work — the queue is created
+and jobs are accepted — and then nothing prints, because the B-EV4 does not
+understand PostScript.
 
 If you do not know it, the printer answers on three ports and nothing else on a
 typical network answers on all three:
