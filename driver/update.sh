@@ -41,6 +41,10 @@ OLD_PPD_SUM="$(shasum -a 256 <"$PPD_DIR/$PPD" 2>/dev/null | cut -d' ' -f1 || ech
 echo "==> Refreshing filter in $FILTER_DIR"
 install -o root -g wheel -m 0755 rastertotpcl "$FILTER_DIR/rastertotpcl"
 install -o root -g wheel -m 0755 rastertotpcl-debug "$FILTER_DIR/rastertotpcl-debug"
+if [ -f ../packaging/icon/TECBEV4.icns ]; then
+  install -o root -g wheel -m 0644 ../packaging/icon/TECBEV4.icns \
+          "$(dirname "$FILTER_DIR")/TECBEV4.icns"
+fi
 
 echo "==> Refreshing PPDs in $PPD_DIR"
 install -o root -g wheel -m 0644 ppd/*.ppd "$PPD_DIR/"

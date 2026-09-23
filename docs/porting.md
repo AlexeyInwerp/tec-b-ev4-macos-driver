@@ -2,17 +2,16 @@
 
 Assessment of what it would take to run this on older macOS, and on Windows.
 
-Everything in the macOS section was verified by compiling and inspecting
-binaries on macOS 26 / Apple Silicon. **None of it has been run on an actual
-Catalina machine** — there wasn't one available — so treat it as a well-founded
-static analysis rather than a tested port.
+**Catalina is confirmed working** — the driver was installed and used on
+10.15 on 2026-09-23. The rest of the macOS section was verified by compiling
+and inspecting binaries on macOS 26 / Apple Silicon.
 
 ## Older macOS, down to Catalina (10.15)
 
-**Verdict: should work with no source changes.** The build system now produces a
-universal binary targeting 10.15 by default.
+**Verdict: works.** Confirmed on Catalina; the build system produces a universal
+binary targeting 10.15 by default.
 
-### Why it looks safe
+### Why it works
 
 The filter needs only twelve CUPS symbols, all of them long-stable API that
 predates Catalina by years:

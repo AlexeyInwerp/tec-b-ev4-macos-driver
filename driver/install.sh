@@ -28,6 +28,13 @@ mkdir -p "$FILTER_DIR"
 install -o root -g wheel -m 0755 rastertotpcl "$FILTER_DIR/rastertotpcl"
 install -o root -g wheel -m 0755 rastertotpcl-debug "$FILTER_DIR/rastertotpcl-debug"
 
+# The PPD's *APPrinterIconPath points here; without it Printers & Scanners
+# falls back to a generic printer glyph.
+if [ -f ../packaging/icon/TECBEV4.icns ]; then
+  install -o root -g wheel -m 0644 ../packaging/icon/TECBEV4.icns \
+          "$(dirname "$FILTER_DIR")/TECBEV4.icns"
+fi
+
 echo "==> Installing PPDs into $PPD_DIR"
 mkdir -p "$PPD_DIR"
 install -o root -g wheel -m 0644 ppd/*.ppd "$PPD_DIR/"

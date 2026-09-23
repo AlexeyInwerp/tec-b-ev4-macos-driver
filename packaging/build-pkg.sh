@@ -35,6 +35,7 @@ install -m 0644 driver/ppd/*.ppd          "$STAGE/Library/Printers/PPDs/Contents
 install -m 0755 tools/*.py tools/*.sh     "$STAGE/Library/Printers/TEC/tools/"
 install -m 0644 LICENSE README.md         "$STAGE/Library/Printers/TEC/"
 install -m 0755 driver/uninstall.sh       "$STAGE/Library/Printers/TEC/"
+install -m 0644 packaging/icon/TECBEV4.icns "$STAGE/Library/Printers/TEC/"
 
 echo "==> Writing postinstall"
 mkdir -p packaging/scripts

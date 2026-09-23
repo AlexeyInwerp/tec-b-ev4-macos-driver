@@ -391,10 +391,19 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   /*
    * Completing fine adjust according to Thermal or direct printing
    */
-  if (strcmp(header->MediaType, "Direct"))
-    strcat(Fadjt,"1|}");
-  else // Thermal transfer mode, with or without ribbon saving
-    strcat(Fadjt,"0|}");
+  /*
+   * [ESC]AY's last parameter picks which density curve to adjust:
+   *   0 = thermal transfer - "the direct thermal model ignores this"
+   *   1 = direct thermal
+   *
+   * strcmp() returns 0 on a match, so the original test sent 0 for Direct
+   * media and 1 for everything else - exactly backwards. On a direct thermal
+   * printer that made the Darkness setting a silent no-op.
+   */
+  if (strcmp(header->MediaType, "Direct") == 0)
+    strcat(Fadjt,"1|}");   /* direct thermal */
+  else
+    strcat(Fadjt,"0|}");   /* thermal transfer */
   
   /*
    * Send parameter to printer

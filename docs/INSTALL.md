@@ -105,7 +105,48 @@ System Settings → Printers & Scanners → **Add Printer**, then choose
 **Toshiba Tec B-EV4D-GS14** as the driver (or `…B-EV4T-GS14` for a 300 dpi
 thermal-transfer model).
 
-For a network printer use **LPD**, not the raw socket port:
+### Network printers: three things that matter
+
+**1. Use LPD, not the raw socket.** In the Add Printer dialog this means the
+**IP** tab with Protocol set to **Line Printer Daemon - LPD**, Queue `lp`. The
+obvious-looking "HP Jetdirect - Socket" option is the one to avoid: it silently
+discards jobs over a few kilobytes while reporting success.
+
+**2. You will usually have to type the address in by hand.** The B-EV4 has no
+Bonjour/mDNS, so it never appears in the automatic browse list however long you
+wait. Use the **IP** tab and enter the address.
+
+If you do not know it, the printer answers on three ports and nothing else on a
+typical network answers on all three:
+
+```sh
+nmap -p 80,515,8000 192.168.1.0/24 --open
+```
+
+Confirm you have the right box before committing to it — this asks the printer
+its model and serial, and prints nothing:
+
+```sh
+/Library/Printers/TEC/tools/bev4ctl.py --host <ip> info
+```
+
+**3. Give it a fixed address.** With no mDNS, nothing rediscovers the printer
+when its address changes — and a DHCP lease will eventually move. When it does,
+the queue keeps pointing at the old address and every job fails, usually without
+an obvious reason. Either add a **DHCP reservation** on your router (simplest,
+and survives a printer reset), or give the printer a static address:
+
+```sh
+sudo /Library/Printers/TEC/tools/lan-setup.sh --ip 192.168.1.50
+```
+
+If it has already moved, re-point the queue rather than recreating it:
+
+```sh
+sudo lpadmin -p TEC_B_EV4 -v lpd://<new-ip>/lp
+```
+
+### Adding the queue from the command line
 
 ```sh
 lpadmin -p TEC_B_EV4 -E -v lpd://<printer-ip>/lp \
@@ -116,6 +157,42 @@ lpadmin -p TEC_B_EV4 -E -v lpd://<printer-ip>/lp \
 
 `socket://<ip>:8000` looks like it works and then silently discards anything
 over a few kilobytes. See the README.
+
+## Updating
+
+Installing a newer package **replaces the files in place**. It carries the same
+package identifier, so macOS treats it as an upgrade rather than a second
+install: the filter, PPDs, icon and tools under `/Library/Printers` are
+overwritten, and no duplicate appears in Printers & Scanners.
+
+One thing it does **not** do, and this catches people out:
+
+> **An existing queue keeps its own copy of the PPD.**
+
+When a queue is created, CUPS copies the PPD to
+`/etc/cups/ppd/<queue>.ppd` and uses that copy from then on. Replacing the PPD
+in `/Library/Printers/PPDs` does not touch it. So after an update that changes
+the PPD — new media sizes, new options, renamed settings — an existing queue
+carries on with the old one, while a newly added printer gets the new one.
+
+To pull the new PPD into an existing queue:
+
+```sh
+sudo lpadmin -p TEC_B_EV4 -P /Library/Printers/PPDs/Contents/Resources/tecbev4d.ppd
+```
+
+Be aware that re-applying a PPD **resets that queue's options to defaults** —
+darkness, speed, media size, sensor. Note what you have first:
+
+```sh
+lpoptions -p TEC_B_EV4
+```
+
+Updating the *filter* alone needs none of this: the binary is executed fresh for
+every job, so replacing it takes effect immediately and queue settings are
+untouched. That is the common case, and it is what `driver/update.sh` does when
+installing from source — it swaps the binaries, reports whether the PPD also
+changed, and leaves the decision to you.
 
 ## Requirements
 

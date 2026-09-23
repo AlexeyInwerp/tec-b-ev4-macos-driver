@@ -143,3 +143,55 @@ If you know every current value — from a self-test print — you can send
 `[ESC]Z2;1` followed by `[ESC]Z0` to re-initialise. This project does not wrap
 that command, on purpose: a partially-correct parameter block is worse than no
 change at all, and the two safe routes above already exist.
+
+## Calibration
+
+The printer measures the gap between labels with its media sensor. If it
+mis-positions, feeds continuously, or reports a paper jam on media that is
+loaded correctly, the sensor needs calibrating for that stock.
+
+### Automatic calibration — the normal route
+
+Do this once whenever you change to different label stock.
+
+**On the printer**, with the media loaded: power on **holding FEED**, release at
+the **fifth** LED step (solid red). The printer feeds a few labels, sets the
+sensor threshold for that media, and measures the label pitch. The result is
+stored and survives power cycles — which is the point: you calibrate once
+deliberately, rather than leaving `AUTO CALIB.` on and paying for it with wasted
+labels at every power-on.
+
+**Over the network**, the web UI has the same function at
+`/cgi-bin/calibrate.cgi`.
+
+Calibration works with media up to 254 mm pitch.
+
+### Reading the current sensor setting
+
+The self-test print (power on holding FEED, release at the **sixth** step,
+solid green) lists it as, for example:
+
+```
+SENSOR TRANSMISSIVE [17]
+```
+
+— transmissive sensor, sensitivity level 17.
+
+### Manual sensitivity, when automatic calibration fails
+
+On difficult media — very thin liner, heavily pre-printed labels — automatic
+calibration may fail to find the gap. Sensitivity can then be set by hand
+through the Fine Adjustment Value Set Command `[ESC]Z2;2`, which carries a
+sensitivity value for each sensor, `00` (lowest) to `63` (highest), followed by
+`[ESC]Z0` to re-initialise.
+
+This project does **not** wrap that command, for the same reason it does not
+wrap `[ESC]Z2;1`: it rewrites every fine-adjustment value positionally, there is
+no command to read the current ones back, and a partially-correct block is worse
+than no change. Read the current values from a self-test print first, and send
+the command deliberately if you need it.
+
+Note these are *system* settings, stored in the printer. They are not per-job,
+so they do not belong in the print dialog and are not in the PPD. The per-job
+adjustments — feed, cut and back-feed position, in 0.5 mm steps — are in the
+queue's **Options**, and those map to `[ESC]AX`.
