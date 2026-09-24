@@ -97,6 +97,11 @@ sudo driver/uninstall.sh                    # filter, PPDs and queues
 KEEP_QUEUES=1 sudo -E driver/uninstall.sh   # leave queues in place
 ```
 
+## Troubleshooting
+
+Cropped labels, silent failures, wrong driver, a queue that stopped working:
+**[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)**.
+
 ## Printer administration
 
 The B-EV4 has **two independent management surfaces**, and they expose
