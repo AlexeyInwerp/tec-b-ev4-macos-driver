@@ -31,8 +31,20 @@ fi
 
 echo "==> Generating PPDs ..."
 rm -rf ppd ppd-debug
+
+# The upstream .drv hardcodes Version "1.4", which ppdc puts in *FileVersion and
+# on the end of *NickName - and *NickName is what macOS shows in Printers &
+# Scanners. Left alone it reports 1.4 whatever we ship, so "which version am I
+# running?" is unanswerable from the UI. Build against a copy carrying the
+# project version instead. It must sit beside labelmedia.h for the #include.
+PROJECT_VERSION="$(cat ../VERSION 2>/dev/null || echo 0.0.0)"
+BUILD_DRV="tectpcl2.build.drv"
+trap 'rm -f "$BUILD_DRV"' EXIT
+/usr/bin/sed "s/^Version \"[^\"]*\"/Version \"$PROJECT_VERSION\"/" \
+    tectpcl2.drv > "$BUILD_DRV"
+
 if command -v ppdc >/dev/null 2>&1; then
-  ppdc tectpcl2.drv 2>&1 | grep -v "Unable to find #po file" || true
+  ppdc "$BUILD_DRV" 2>&1 | grep -v "Unable to find #po file" || true
 elif [ -d ppd-prebuilt ]; then
   # ppdc was removed from some systems; fall back to the checked-in PPDs.
   echo "    ppdc not found - using prebuilt PPDs"
