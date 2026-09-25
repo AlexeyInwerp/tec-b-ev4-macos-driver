@@ -52,18 +52,54 @@ echo "$NEW_SUM" >"$STAMP"
 
 if [ "$NEW_PPD_SUM" != "$OLD_PPD_SUM" ]; then
   if [ "${APPLY_PPD:-0}" = "1" ]; then
-    echo "==> PPD changed - re-applying to '$QUEUE' (queue options reset to defaults)"
-    lpadmin -p "$QUEUE" -P "ppd/$PPD" \
-            -o PageSize=w283h425 -o teMediaTracking=2 -o MediaType=Direct \
-            -o Resolution=203dpi -o Gap=2
-    cupsenable "$QUEUE"; cupsaccept "$QUEUE"
+    if lpstat -p "$QUEUE" >/dev/null 2>&1; then
+      # Applying a PPD resets every option on the queue. Per-queue settings
+      # are not visible to `lpoptions` - that only reports IPP attributes and
+      # explicit overrides - they live as *Default<Option> lines inside the
+      # queue's own copy of the PPD. So diff those against the new PPD and
+      # replay only what the user actually changed.
+      QPPD="/etc/cups/ppd/$QUEUE.ppd"
+      URI="$(lpstat -v "$QUEUE" 2>/dev/null | sed 's/.*: //')"
+      echo "==> Re-applying PPD to '$QUEUE'"
+
+      RESTORE=""
+      if [ -r "$QPPD" ]; then
+        while IFS= read -r line; do
+          opt="${line%%:*}"; opt="${opt#\*Default}"
+          val="${line#*: }"; val="${val%\"}"; val="${val#\"}"
+          case "$opt" in
+            PageRegion|ImageableArea|PaperDimension|Font|ColorSpace|Resolution) continue ;;
+          esac
+          # Only replay it if the new PPD would default to something else.
+          newdef="$(grep -m1 "^\*Default$opt:" "ppd/$PPD" 2>/dev/null | sed 's/.*: *//; s/"//g')"
+          [ -z "$newdef" ] && continue
+          [ "$val" = "$newdef" ] && continue
+          # ...and only if the new PPD still offers that choice.
+          grep -q "^\*$opt $val[/:]" "ppd/$PPD" 2>/dev/null || continue
+          RESTORE="$RESTORE -o $opt=$val"
+        done <<EOF
+$(grep '^\*Default' "$QPPD" 2>/dev/null)
+EOF
+      fi
+
+      # shellcheck disable=SC2086
+      lpadmin -p "$QUEUE" -P "ppd/$PPD" $RESTORE
+      [ -n "$URI" ] && lpadmin -p "$QUEUE" -v "$URI"
+      cupsenable "$QUEUE"; cupsaccept "$QUEUE"
+      if [ -n "$RESTORE" ]; then
+        echo "    carried over:$(echo "$RESTORE" | sed 's/ -o / /g')"
+      else
+        echo "    no customised options to carry over"
+      fi
+    else
+      echo "!! Queue '$QUEUE' does not exist - nothing to re-apply the PPD to."
+    fi
   else
     echo
     echo "!! The PPD changed, but '$QUEUE' still uses its existing copy."
-    echo "   New media sizes or options will not appear until you re-apply it:"
+    echo "   New media sizes, the icon and new options will not appear until"
+    echo "   it is re-applied. This now preserves your settings:"
     echo "     sudo APPLY_PPD=1 $0"
-    echo "   That resets darkness/speed/media back to defaults, so note yours first:"
-    echo "     lpoptions -p $QUEUE"
   fi
 fi
 
