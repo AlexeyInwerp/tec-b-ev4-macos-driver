@@ -6,12 +6,24 @@
 # Replaces the filter binaries and the shipped PPDs, but leaves your queues
 # and their settings (darkness, speed, media size) alone.
 #
-# If the PPD itself changed, the queue keeps using its existing copy until you
-# re-apply it -- that step resets queue options to defaults, so it is opt-in:
-#
-#   sudo APPLY_PPD=1 driver/update.sh
+# A changed PPD is applied to the queue automatically, carrying your settings
+# across. Pass --keep-ppd to leave the queue on its existing copy.
 set -euo pipefail
 cd "$(dirname "$0")"
+
+# Applying a changed PPD is the default. It used to be opt-in via an
+# environment variable because it reset the queue's options, but sudo strips
+# environment variables unless they are passed as command-line assignments, so
+# the opt-in silently did nothing and the filter updated while the queue kept
+# its old PPD. Now that settings are carried across there is no reason to skip
+# it, and a flag cannot be swallowed the way an env var can.
+APPLY_PPD="${APPLY_PPD:-1}"
+case "${1:-}" in
+  --keep-ppd)  APPLY_PPD=0 ;;
+  --apply-ppd) APPLY_PPD=1 ;;
+  "")          ;;
+  *) echo "usage: $0 [--apply-ppd | --keep-ppd]" >&2; exit 2 ;;
+esac
 
 FILTER_DIR="${FILTER_DIR:-/Library/Printers/TEC/filter}"
 PPD_DIR="${PPD_DIR:-/Library/Printers/PPDs/Contents/Resources}"
@@ -51,7 +63,7 @@ install -o root -g wheel -m 0644 ppd/*.ppd "$PPD_DIR/"
 echo "$NEW_SUM" >"$STAMP"
 
 if [ "$NEW_PPD_SUM" != "$OLD_PPD_SUM" ]; then
-  if [ "${APPLY_PPD:-0}" = "1" ]; then
+  if [ "$APPLY_PPD" = "1" ]; then
     if lpstat -p "$QUEUE" >/dev/null 2>&1; then
       # Applying a PPD resets every option on the queue. Per-queue settings
       # are not visible to `lpoptions` - that only reports IPP attributes and
@@ -98,10 +110,14 @@ EOF
     echo
     echo "!! The PPD changed, but '$QUEUE' still uses its existing copy."
     echo "   New media sizes, the icon and new options will not appear until"
-    echo "   it is re-applied. This now preserves your settings:"
-    echo "     sudo APPLY_PPD=1 $0"
+    echo "   it is re-applied:"
+    echo "     sudo $0 --apply-ppd"
   fi
 fi
 
 [ "$NEW_SUM" = "$OLD_SUM" ] && echo "==> Driver source unchanged (filter still refreshed)."
+echo
 echo "==> Update complete."
+if lpstat -p "$QUEUE" >/dev/null 2>&1; then
+  echo "    queue '$QUEUE' reports: $(grep -m1 '^\*NickName' "/etc/cups/ppd/$QUEUE.ppd" 2>/dev/null | sed 's/.*: //; s/"//g')"
+fi

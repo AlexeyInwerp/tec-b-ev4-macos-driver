@@ -84,7 +84,7 @@ back to defaults. Note your current settings first, then opt in:
 
 ```sh
 lpoptions -p TEC_B_EV4          # what you have now
-sudo APPLY_PPD=1 driver/update.sh
+sudo driver/update.sh
 ```
 
 Re-running `sudo driver/install.sh` also works as a blunt update, but it always
@@ -187,7 +187,7 @@ summarising binary graphic payloads instead of dumping them).
 
 ## Debugging
 
-Install with `DEBUG_QUEUE=1 sudo -E driver/install.sh` to also get a
+Install with `sudo DEBUG_QUEUE=1 driver/install.sh` to also get a
 `TEC_B_EV4_DEBUG` queue wired to `rastertotpcl-debug`. That wrapper logs the
 full filter invocation and tees both the incoming CUPS raster and the outgoing
 TPCL into `/tmp/tpcl-debug/`, so any job can be replayed without a printer:
