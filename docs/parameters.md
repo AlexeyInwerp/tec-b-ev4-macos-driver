@@ -55,6 +55,7 @@ the printer and the media loaded in it, set once:
 
 | | |
 | --- | --- |
+| Media loaded in printer | the stock actually on the roll; overrides a job's paper size for the label dimensions sent to the printer |
 | Cutter unit, Strip-off module | which accessories are fitted |
 | Label Gap | the media's gap size |
 | Media Detection | which sensor to use |
