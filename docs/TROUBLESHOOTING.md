@@ -53,6 +53,23 @@ driver ever saw it.
 The dimensions are the quick tell — at 203 dpi, 100 × 150 mm is **798 × 1198**
 dots. A much taller raster means a too-large paper size was selected.
 
+## Making 100 x 150 mm and scale-to-fit the defaults
+
+Set them on the queue so every job starts correct:
+
+```sh
+lpadmin -p TEC_B_EV4 -o PageSize=w283h425 -o fit-to-page-default=true
+```
+
+`PageSize` is already the shipped default. `fit-to-page-default` is belt and
+braces: on macOS the PDF is scaled onto the selected page anyway, so its real
+value is on other clients that honour it.
+
+Neither stops an application overriding the paper size from its own Page Setup,
+which is the usual cause of a cropped label — see above. macOS remembers paper
+size **per document** in some apps, so a label that once printed at 200 mm will
+keep doing so until you change it there.
+
 ## Nothing prints, and CUPS says the job completed
 
 If the queue is on `socket://…:8000`, that is the cause — switch to

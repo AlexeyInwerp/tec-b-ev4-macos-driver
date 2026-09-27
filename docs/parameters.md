@@ -46,6 +46,36 @@ after changing to different label stock — run a **manual** calibration once fr
 `/cgi-bin/calibrate.cgi` rather than turning the automatic one back on. The
 result is stored, so it survives power cycles without feeding labels every time.
 
+## Where each setting lives
+
+macOS splits printer options in two, and the driver now follows that split.
+
+**Printers & Scanners → Options & Supplies → Options** — things that describe
+the printer and the media loaded in it, set once:
+
+| | |
+| --- | --- |
+| Cutter unit, Strip-off module | which accessories are fitted |
+| Label Gap | the media's gap size |
+| Media Detection | which sensor to use |
+| Graphics Mode | TOPIX / banded nibble |
+| Feed, cut and back-feed adjustment | print position calibration |
+| Ribbon adjustment | thermal transfer only |
+
+**The Print dialog** — things that can reasonably differ between jobs:
+
+| | |
+| --- | --- |
+| Paper Size, Orientation | |
+| Resolution, Media Type | |
+| Temperature (darkness), Print Speed | |
+| Print Mode, Cutter Option | |
+
+Four of these *have* to stay in the print dialog even though they feel
+printer-level: `Resolution`, `MediaType`, `Darkness` and the cut interval work
+by emitting PostScript that must run while the page is being rasterised. Move
+them and they simply stop working.
+
 ## Media sensors
 
 The B-EV4 has **both sensors built in**, plus a no-sensor mode. You choose which
