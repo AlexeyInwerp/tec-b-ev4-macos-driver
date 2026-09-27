@@ -98,6 +98,7 @@ int   Page,           /* Current page */
       Gmode; 			    /* Tec Graphics mode */
 
 int		ModelNumber; 		/* cupsModelNumber attribute (not currently in use) */
+static int    MaxLines = 0;           /* Physical label height in raster lines, 0 = no limit */
 
 static unsigned char  *BandBuffer;    /* Nibble data for the current band */
 static int    BandBytes;              /* Bytes currently in BandBuffer */
@@ -313,6 +314,32 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
   length = (int) (header->cupsPageSize[1] * 254/72);
   labelpitch = length + labelgap;
   width = (int) (header->cupsPageSize[0] * 254/72);
+
+ /*
+  * If the queue declares which media is physically loaded, that wins over the
+  * job's paper size. An application can override Page Setup - macOS remembers
+  * it per document - and telling the printer a label is 200mm long when 150mm
+  * stock is loaded wrecks registration for that label and every one after it.
+  * The printer's own media is not a per-job property, so treat it as fact.
+  */
+  MaxLines = 0;
+  if ((choice = ppdFindMarkedChoice(ppd, "teInstalledMedia")) != NULL &&
+      strcmp(choice->choice, "0") != 0)
+  {
+    int mw = 0, ml = 0;
+
+    if (sscanf(choice->choice, "%4dx%4d", &mw, &ml) == 2 && mw > 0 && ml > 0)
+    {
+      if (mw != width || ml != length)
+        fprintf(stderr, "INFO: job page is %dx%d (0.1mm) but the queue says "
+                        "%dx%d is loaded; using the loaded size\n",
+                width, length, mw, ml);
+      width      = mw;
+      length     = ml;
+      labelpitch = length + labelgap;
+      MaxLines   = (int)((double)length * header->HWResolution[1] / 254.0 + 0.5);
+    }
+  }
 
   /* Send label size, assume gap is same all the way round */
   printf("{D%04d,%04d,%04d|}\n",labelpitch, width, length, width + labelgap); 
@@ -1020,8 +1047,18 @@ main(int  argc,				/* I - Number of command-line arguments */
         break;
 
       /*
-       * Write it to the printer...
+       * Write it to the printer - but never past the end of the physical
+       * label, or the overflow prints onto the next one.
        */
+      if (MaxLines && y >= MaxLines)
+      {
+        if (y == MaxLines)
+          fprintf(stderr, "INFO: job is %u lines but the loaded label holds "
+                          "%d; the remainder is not printed\n",
+                  header.cupsHeight, MaxLines);
+        continue;   /* keep draining the raster so the stream stays in sync */
+      }
+
       OutputLine(ppd, &header, y);
     }
 

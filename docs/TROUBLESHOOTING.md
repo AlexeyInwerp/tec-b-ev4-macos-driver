@@ -53,6 +53,40 @@ driver ever saw it.
 The dimensions are the quick tell — at 203 dpi, 100 × 150 mm is **798 × 1198**
 dots. A much taller raster means a too-large paper size was selected.
 
+## Telling the printer what media is loaded
+
+`PageSize` is a per-job setting and CUPS will not let it be anything else — it
+drives the whole rasterisation geometry. So an application can always override
+it from its own Page Setup, and macOS remembers that **per document**.
+
+What you *can* do is state, once, what is actually on the roll:
+
+**Printers & Scanners → Options & Supplies → Options → Media loaded in printer**
+
+Set it to your stock, e.g. `100 x 150 mm`. The driver then uses that for the
+label size it tells the printer, whatever paper size the job arrived with:
+
+```
+media not declared   ->  {D2020,0998,2000|}   printer told the label is 200 mm
+100 x 150 declared   ->  {D1520,1000,1500|}   printer told the truth
+```
+
+This does **not** make an oversized document fit — the raster is already too
+tall and the excess is dropped, with a note in the log:
+
+```
+INFO: job page is 998x2000 (0.1mm) but the queue says 1000x1500 is loaded
+INFO: job is 1599 lines but the loaded label holds 1199; the remainder is not printed
+```
+
+What it does do is stop the damage spreading. Told a 200 mm pitch on 150 mm
+stock, the printer feeds past the gap and every subsequent label is
+misregistered until the roll is realigned. With the media declared, one label
+is wrong and the rest are fine.
+
+To actually print the whole thing, still set **Paper Size → 100 x 150 mm** and
+**Scale to Fit → Print Entire Image** in the print dialog.
+
 ## Making 100 x 150 mm and scale-to-fit the defaults
 
 Set them on the queue so every job starts correct:

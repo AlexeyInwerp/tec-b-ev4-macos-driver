@@ -162,6 +162,17 @@ Group "PrinterSettings/Printer Settings"
 
 
 Group "InstallableOptions/Installable Options"
+  Option "teInstalledMedia/Media loaded in printer" PickOne AnySetup 10
+    *Choice "0/Use the job's paper size" ""
+    Choice "1000x1500/100 x 150 mm" ""
+    Choice "1000x1000/100 x 100 mm" ""
+    Choice "1000x0750/100 x 75 mm" ""
+    Choice "1000x0500/100 x 50 mm" ""
+    Choice "0600x0400/60 x 40 mm" ""
+    Choice "0580x0400/58 x 40 mm" ""
+    Choice "0570x0320/57 x 32 mm" ""
+    Choice "0500x0300/50 x 30 mm" ""
+    Choice "0400x0300/40 x 30 mm" ""
   Option "Gap/Label Gap" PickOne AnySetup 20
     Choice "0/0 mm " ""
     Choice "1/1 mm " ""
