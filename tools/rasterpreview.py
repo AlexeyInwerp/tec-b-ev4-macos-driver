@@ -21,6 +21,9 @@ import struct, sys, zlib
 
 
 def main():
+    if len(sys.argv) < 3:
+        sys.exit("usage: rasterpreview.py <dump|-> <out.png>\n"
+                 "  e.g. ./rasterdump < job.raster | rasterpreview.py - preview.png")
     src, dst = sys.argv[1], sys.argv[2]
     data = sys.stdin.buffer.read() if src == '-' else open(src, 'rb').read()
 

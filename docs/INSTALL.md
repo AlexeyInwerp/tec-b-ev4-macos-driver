@@ -13,8 +13,8 @@ being paid.
 The consequence is that macOS will refuse to open the `.pkg` normally:
 
 ```
-$ spctl -a -vv -t install TEC-B-EV4-0.1.0.pkg
-TEC-B-EV4-0.1.0.pkg: rejected
+$ spctl -a -vv -t install TEC-B-EV4-<version>.pkg
+TEC-B-EV4-<version>.pkg: rejected
 source=no usable signature
 ```
 
@@ -23,7 +23,7 @@ Since you cannot check a signature, **check the SHA-256 instead** — it is
 published next to each release asset:
 
 ```sh
-shasum -a 256 -c TEC-B-EV4-0.1.0.pkg.sha256
+shasum -a 256 -c TEC-B-EV4-<version>.pkg.sha256
 ```
 
 ## Route 1: build from source (recommended)
@@ -53,7 +53,7 @@ executes as part of the print pipeline is a reasonable thing to want.
 ### From the Terminal — the path of least resistance
 
 ```sh
-sudo installer -pkg TEC-B-EV4-0.1.0.pkg -target /
+sudo installer -pkg TEC-B-EV4-<version>.pkg -target /
 ```
 
 `installer(8)` does not consult Gatekeeper, so an unsigned package installs
@@ -77,7 +77,7 @@ that plain double-clicking does not.
 **Or remove the quarantine flag first**
 
 ```sh
-xattr -dr com.apple.quarantine TEC-B-EV4-0.1.0.pkg
+xattr -dr com.apple.quarantine TEC-B-EV4-<version>.pkg
 ```
 
 Then open it normally. Only do this once you have checked the SHA-256 — you are
@@ -223,7 +223,8 @@ changed, and leaves the decision to you.
 ## Uninstalling
 
 ```sh
-sudo /Library/Printers/TEC/uninstall.sh   # if installed from source
+sudo /Library/Printers/TEC/uninstall.sh      # installed from the package
+sudo driver/uninstall.sh                     # installed from source
 ```
 
 or by hand:

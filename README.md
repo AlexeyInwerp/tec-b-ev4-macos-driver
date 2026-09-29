@@ -9,7 +9,30 @@ workhorse label printer I've owned — so I decided to spend some tokens and mak
 a proper open-source driver for it, because Toshiba never shipped one for the
 Mac.
 
-## Status
+## Project status
+
+**Working and in daily use.** Feature-complete for what it set out to do, so
+this is likely the last release unless bugs turn up — which is an invitation,
+not a boast: it has been exercised on exactly one printer.
+
+Verified on a **B-EV4-G** (203 dpi, firmware V1.1G) with 100 × 150 mm
+direct-thermal labels, over both USB and LAN, on **macOS 26** and **macOS 10.15
+Catalina**.
+
+Untested, and where problems are most likely:
+
+* the 300 dpi **B-EV4T**, and the other TPCL models the PPD set covers
+  (B-SA4, B-SX4/5/6/8, B-852R, B-SV4) — inherited from upstream and not
+  exercised here
+* media other than 100 × 150 mm gapped direct thermal
+* the cutter and strip-off accessories, neither of which was available
+
+A **Windows version is not planned**. Toshiba ships a supported Windows TPCL
+driver, so the work would duplicate something that already exists — see
+[docs/porting.md](docs/porting.md). If that changes, the Python tooling here
+already runs on Windows unchanged; only the CUPS filter is macOS-specific.
+
+## What works
 
 | Thing | State |
 | --- | --- |

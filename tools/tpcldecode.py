@@ -51,7 +51,14 @@ def opcode(body: bytes) -> str:
 
 
 def main():
-    raw = open(sys.argv[1], 'rb').read() if len(sys.argv) > 1 else sys.stdin.buffer.read()
+    if len(sys.argv) > 1:
+        raw = open(sys.argv[1], 'rb').read()
+    else:
+        if sys.stdin.isatty():
+            sys.exit("usage: tpcldecode.py <file.tpcl>   (or pipe TPCL on stdin)")
+        raw = sys.stdin.buffer.read()
+    if not raw:
+        sys.exit("tpcldecode: no input")
     total = 0
     stats = {}
     for idx, (style, body) in enumerate(commands(raw), 1):
