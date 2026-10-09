@@ -62,9 +62,20 @@ echo "==> Refreshing PPDs in $PPD_DIR"
 install -o root -g wheel -m 0644 ppd/*.ppd "$PPD_DIR/"
 echo "$NEW_SUM" >"$STAMP"
 
-if [ "$NEW_PPD_SUM" != "$OLD_PPD_SUM" ]; then
+# Compare against the QUEUE's PPD, not the system one. Comparing system copies
+# meant that once the system PPD was current - which the same run had just made
+# true, or an earlier partial run had - the queue was judged up to date and
+# skipped, so it could sit several versions behind indefinitely. That is how a
+# queue ended up on 0.1.4 while the filter was 1.0.1, silently losing every
+# PPD-side feature. Applying is cheap and preserves settings, so just do it.
+QUEUE_VER="$(grep -m1 '^\*NickName' "/etc/cups/ppd/$QUEUE.ppd" 2>/dev/null | sed 's/.*, //; s/"//')"
+NEW_VER="$(grep -m1 '^\*NickName' "ppd/$PPD" 2>/dev/null | sed 's/.*, //; s/"//')"
+if [ -n "$QUEUE_VER" ] && [ "$QUEUE_VER" != "$NEW_VER" ]; then
+  echo "==> Queue '$QUEUE' is on $QUEUE_VER, shipping $NEW_VER"
+fi
+
+if lpstat -p "$QUEUE" >/dev/null 2>&1; then
   if [ "$APPLY_PPD" = "1" ]; then
-    if lpstat -p "$QUEUE" >/dev/null 2>&1; then
       # Applying a PPD resets every option on the queue. Per-queue settings
       # are not visible to `lpoptions` - that only reports IPP attributes and
       # explicit overrides - they live as *Default<Option> lines inside the
@@ -103,9 +114,7 @@ EOF
       else
         echo "    no customised options to carry over"
       fi
-    else
-      echo "!! Queue '$QUEUE' does not exist - nothing to re-apply the PPD to."
-    fi
+
   else
     echo
     echo "!! The PPD changed, but '$QUEUE' still uses its existing copy."
