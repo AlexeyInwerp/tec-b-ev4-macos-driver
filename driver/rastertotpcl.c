@@ -99,6 +99,9 @@ int   Page,           /* Current page */
 
 int		ModelNumber; 		/* cupsModelNumber attribute (not currently in use) */
 static int    MaxLines = 0;           /* Physical label height in raster lines, 0 = no limit */
+static unsigned char *GrayBuffer;     /* 8-bit input line, when thresholding */
+static unsigned int   GrayBytes;      /* Its length */
+static int    Threshold = 128;        /* Ink at or above this grey level */
 
 static unsigned char  *BandBuffer;    /* Nibble data for the current band */
 static int    BandBytes;              /* Bytes currently in BandBuffer */
@@ -718,6 +721,10 @@ EndPage(ppd_file_t *ppd,		/* I - PPD file */
   } else if (Gmode == TEC_GMODE_NIBBLE) {
     free(BandBuffer);
   }
+  if (GrayBytes) {
+    free(GrayBuffer);
+    GrayBytes = 0;
+  }
   free(Buffer);
 }
 
@@ -1017,6 +1024,25 @@ main(int  argc,				/* I - Number of command-line arguments */
 
   while (cupsRasterReadHeader2(ras, &header))
   {
+   /*
+    * Ask the rasteriser for 8-bit grey and threshold it here rather than
+    * letting it halftone to 1 bit. Downscaling a barcode resamples crisp bars
+    * into grey edges, and dithering those gives speckled, unscannable bars; a
+    * hard threshold keeps them solid. Everything downstream expects 1 bit, so
+    * rewrite the header to the 1-bit geometry and convert each line as it is
+    * read. Must happen before StartPage, which sizes its buffers from this.
+    */
+    GrayBytes = 0;
+    if (header.cupsBitsPerColor == 8 && header.cupsBitsPerPixel == 8)
+    {
+      GrayBytes               = header.cupsBytesPerLine;
+      GrayBuffer              = malloc(GrayBytes);
+      header.cupsBitsPerColor = 1;
+      header.cupsBitsPerPixel = 1;
+      header.cupsBytesPerLine = (header.cupsWidth + 7) / 8;
+      fprintf(stderr, "DEBUG: thresholding 8-bit grey at %d\n", Threshold);
+    }
+
     /*
      * Write a status message with the page number and number of copies.
      */
@@ -1043,7 +1069,22 @@ main(int  argc,				/* I - Number of command-line arguments */
       /*
        * Read a line of graphics...
        */
-      if (cupsRasterReadPixels(ras, Buffer, header.cupsBytesPerLine) < 1)
+      if (GrayBytes)
+      {
+        unsigned int i;
+
+        if (cupsRasterReadPixels(ras, GrayBuffer, GrayBytes) < 1)
+          break;
+
+       /*
+        * CUPS_CSPACE_K is ink coverage: 0 is bare media, 255 is full black.
+        */
+        memset(Buffer, 0, header.cupsBytesPerLine);
+        for (i = 0; i < header.cupsWidth; i ++)
+          if (GrayBuffer[i] >= Threshold)
+            Buffer[i / 8] |= (unsigned char)(0x80 >> (i & 7));
+      }
+      else if (cupsRasterReadPixels(ras, Buffer, header.cupsBytesPerLine) < 1)
         break;
 
       /*

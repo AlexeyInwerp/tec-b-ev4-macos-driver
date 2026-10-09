@@ -104,6 +104,23 @@ which is the usual cause of a cropped label — see above. macOS remembers paper
 size **per document** in some apps, so a label that once printed at 200 mm will
 keep doing so until you change it there.
 
+## Barcodes print speckled, lines look noisy or juddered
+
+Not the printer, and not darkness. The rasteriser was **halftoning** the page.
+
+A bitmap label is almost never the printer's exact resolution. A 1800 x 1200
+image at 72 dpi has to become 798 x 1198 dots at 203 dpi — a non-integer
+rescale, often with a rotation. That resampling turns crisp black bars into
+**grey edges**, and converting grey to a 1-bit printer by dithering scatters
+those greys as noise. On a barcode that means ragged bars with white specks
+inside them, which scanners dislike.
+
+Since 1.0.1 the driver asks for 8-bit grey and applies a hard threshold
+instead, so bars stay solid. It is the default.
+
+If you are printing an actual photograph and want tonal shading rather than
+flat black, switch **Image Rendering** to *Dithered* in the print dialog.
+
 ## Nothing prints, and CUPS says the job completed
 
 If the queue is on `socket://…:8000`, that is the cause — switch to

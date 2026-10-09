@@ -121,6 +121,9 @@ MediaSize w288h936
 
 
 Group "General/General"
+  Option "teRendering/Image Rendering" PickOne AnySetup 20
+    *Choice "threshold/Sharp - text, barcodes, line art" "<</cupsBitsPerColor 8/cupsBitsPerPixel 8>>setpagedevice"
+    Choice "halftone/Dithered - photos and shading" "<</cupsBitsPerColor 1/cupsBitsPerPixel 1>>setpagedevice"
   Option "PrintOrient/Orientation" PickOne Anysetup 20
     *Choice "0/Bottom Leading" ""
     Choice "1/Top Leading" ""
