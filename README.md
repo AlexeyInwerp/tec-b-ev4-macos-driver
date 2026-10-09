@@ -21,7 +21,10 @@ Catalina**.
 
 Untested, and where problems are most likely:
 
-* the 300 dpi **B-EV4T**, and the other TPCL models the PPD set covers
+* the 300 dpi **B-EV4D-TS14**, and the **B-EV4T**, which still lists both 203
+  and 300 dpi and so is exposed to the wrong-resolution problem fixed for the
+  203 dpi model (see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)); and the
+  other TPCL models the PPD set covers
   (B-SA4, B-SX4/5/6/8, B-852R, B-SV4) — inherited from upstream and not
   exercised here
 * media other than 100 × 150 mm gapped direct thermal
@@ -46,11 +49,13 @@ already runs on Windows unchanged; only the CUPS filter is macOS-specific.
 | Web UI + CLI administration | working |
 | Driver auto-selected over USB | working (`*1284DeviceID`); network cannot — no SNMP/mDNS |
 | Media sensor (transmissive / gap) | working |
+| Apps that request another resolution (Chrome) | rescaled to the head, working |
 
 ## Hardware
 
-* Toshiba TEC **B-EV4-G** (203 dpi, 8 dots/mm). The 300 dpi `-T` variants are
-  covered by the same PPD set.
+* Toshiba TEC **B-EV4-G** (203 dpi, 8 dots/mm). The 300 dpi variant has its own
+  driver, **B-EV4D-TS14** (untested) — a print head has one resolution, so each
+  driver offers only the one its hardware has.
 * USB. The printer reports itself as `usb://TEC/B-EV4-G`.
 * Media used for development: 100 × 150 mm direct thermal labels, 2 mm gap.
 

@@ -22,16 +22,15 @@
 *% 
 *% 
 *FormatVersion: "4.3"
-*FileVersion: "1.4"
+*FileVersion: "1.0.3"
 *LanguageVersion: English
 *LanguageEncoding: ISOLatin1
 *PCFileName: "tecb852r.ppd"
-*Product: "(GNU Ghostscript)"
-*Product: "(ESP Ghostscript)"
+*Product: "(B-EV4)"
 *Manufacturer: "Toshiba Tec"
 *ModelName: "Toshiba Tec B-852R"
 *ShortNickName: "Toshiba Tec B-852R"
-*NickName: "Toshiba Tec B-852R, 1.4"
+*NickName: "Toshiba Tec B-852R, 1.0.3"
 *PSVersion: "(3010.000) 81501"
 *LanguageLevel: "3"
 *ColorDevice: False
@@ -42,6 +41,8 @@
 *TTRasterizer: Type42
 *% Driver-defined attributes...
 *cupsManualCopies: False
+*APPrinterIconPath: "/Library/Printers/TEC/TECBEV4.icns"
+*1284DeviceID: "MFG:TEC;MDL:B-EV4-G;CMD:TPCL;"
 *cupsVersion: 1.2
 *cupsModelNumber: 0
 *cupsManualCopies: False
@@ -266,6 +267,52 @@
 *ParamCustomPageSize WidthOffset: 3 points 0 0
 *ParamCustomPageSize HeightOffset: 4 points 0 0
 *ParamCustomPageSize Orientation: 5 int 0 0
+*OpenUI *teRendering/Image Rendering: PickOne
+*OrderDependency: 20 AnySetup *teRendering
+*DefaultteRendering: threshold
+*teRendering threshold/Sharp - text, barcodes, line art: "<</cupsBitsPerColor 8/cupsBitsPerPixel 8>>setpagedevice"
+*teRendering halftone/Dithered - photos and shading: "<</cupsBitsPerColor 1/cupsBitsPerPixel 1>>setpagedevice"
+*CloseUI: *teRendering
+*OpenUI *PrintOrient/Orientation: PickOne
+*OrderDependency: 20 AnySetup *PrintOrient
+*DefaultPrintOrient: 0
+*PrintOrient 0/Bottom Leading: ""
+*PrintOrient 1/Top Leading: ""
+*PrintOrient 2/Mirror Print Top Leading: ""
+*PrintOrient 3/Mirror Print Bottom Leading: ""
+*CloseUI: *PrintOrient
+*OpenUI *Resolution/Resolution: PickOne
+*OrderDependency: 10 AnySetup *Resolution
+*DefaultResolution: 300dpi
+*Resolution 300dpi/300 DPI: "<</HWResolution[300 300]/cupsBitsPerColor 1/cupsRowCount 0/cupsRowFeed 0/cupsRowStep 0/cupsColorSpace 3>>setpagedevice"
+*CloseUI: *Resolution
+*OpenGroup: InstallableOptions/Installable Options
+*OpenUI *Cutter/Cutter unit (accessory): Boolean
+*OrderDependency: 10 AnySetup *Cutter
+*DefaultCutter: False
+*Cutter False/Not Installed: ""
+*Cutter True/Installed: ""
+*CloseUI: *Cutter
+*OpenUI *Peel/Strip-off module (accessory): Boolean
+*OrderDependency: 10 AnySetup *Peel
+*DefaultPeel: False
+*Peel False/Not Installed: ""
+*Peel True/Installed: ""
+*CloseUI: *Peel
+*OpenUI *teInstalledMedia/Media loaded in printer: PickOne
+*OrderDependency: 10 AnySetup *teInstalledMedia
+*DefaultteInstalledMedia: 0
+*teInstalledMedia 0/Use the job's paper size: ""
+*teInstalledMedia 1000x1500/100 x 150 mm: ""
+*teInstalledMedia 1000x1000/100 x 100 mm: ""
+*teInstalledMedia 1000x0750/100 x 75 mm: ""
+*teInstalledMedia 1000x0500/100 x 50 mm: ""
+*teInstalledMedia 0600x0400/60 x 40 mm: ""
+*teInstalledMedia 0580x0400/58 x 40 mm: ""
+*teInstalledMedia 0570x0320/57 x 32 mm: ""
+*teInstalledMedia 0500x0300/50 x 30 mm: ""
+*teInstalledMedia 0400x0300/40 x 30 mm: ""
+*CloseUI: *teInstalledMedia
 *OpenUI *Gap/Label Gap: PickOne
 *OrderDependency: 20 AnySetup *Gap
 *DefaultGap: 2
@@ -285,32 +332,146 @@
 *teMediaTracking 3/Transmissive - label gap (alt): ""
 *teMediaTracking 4/Reflective - black mark (alt): ""
 *CloseUI: *teMediaTracking
-*OpenUI *PrintOrient/Orientation: PickOne
-*OrderDependency: 20 AnySetup *PrintOrient
-*DefaultPrintOrient: 0
-*PrintOrient 0/Bottom Leading: ""
-*PrintOrient 1/Top Leading: ""
-*PrintOrient 2/Mirror Print Top Leading: ""
-*PrintOrient 3/Mirror Print Bottom Leading: ""
-*CloseUI: *PrintOrient
-*OpenUI *Resolution/Resolution: PickOne
-*OrderDependency: 10 AnySetup *Resolution
-*DefaultResolution: 300dpi
-*Resolution 300dpi/300 DPI: "<</HWResolution[300 300]/cupsBitsPerColor 1/cupsRowCount 0/cupsRowFeed 0/cupsRowStep 0/cupsColorSpace 3>>setpagedevice"
-*CloseUI: *Resolution
-*OpenGroup: InstallableOptions/Installable Options
-*OpenUI *Cutter/Cutter: Boolean
-*OrderDependency: 10 AnySetup *Cutter
-*DefaultCutter: False
-*Cutter False/Not Installed: ""
-*Cutter True/Installed: ""
-*CloseUI: *Cutter
-*OpenUI *Peel/Peel Off: Boolean
-*OrderDependency: 10 AnySetup *Peel
-*DefaultPeel: False
-*Peel False/Not Installed: ""
-*Peel True/Installed: ""
-*CloseUI: *Peel
+*OpenUI *teGraphicsMode/Graphics Mode: PickOne
+*OrderDependency: 20 AnySetup *teGraphicsMode
+*DefaultteGraphicsMode: 1
+*teGraphicsMode 1/TOPIX Compression: ""
+*teGraphicsMode 2/Raw 8bit Graphics (overwrite): ""
+*teGraphicsMode 3/Raw 8bit Graphics (logic OR): ""
+*teGraphicsMode 4/Banded nibble (required for network/socket): ""
+*CloseUI: *teGraphicsMode
+*OpenUI *FAdjSgn/Feed Direction: PickOne
+*OrderDependency: 20 AnySetup *FAdjSgn
+*DefaultFAdjSgn: 0
+*FAdjSgn 0/+: ""
+*FAdjSgn 1/-: ""
+*CloseUI: *FAdjSgn
+*OpenUI *FAdjV/Feed Adjust Value: PickOne
+*OrderDependency: 20 AnySetup *FAdjV
+*DefaultFAdjV: 000
+*FAdjV 000/0.0 mm: ""
+*FAdjV 005/0.5 mm: ""
+*FAdjV 010/1.0 mm: ""
+*FAdjV 015/1.5 mm: ""
+*FAdjV 020/2.0 mm: ""
+*FAdjV 025/2.5 mm: ""
+*FAdjV 030/3.0 mm: ""
+*FAdjV 035/3.5 mm: ""
+*FAdjV 040/4.0 mm: ""
+*FAdjV 045/4.5 mm: ""
+*FAdjV 050/5.0 mm: ""
+*FAdjV 055/5.5 mm: ""
+*FAdjV 060/6.0 mm: ""
+*FAdjV 065/6.5 mm: ""
+*FAdjV 070/7.0 mm: ""
+*FAdjV 075/7.5 mm: ""
+*FAdjV 080/8.0 mm: ""
+*FAdjV 085/8.5 mm: ""
+*FAdjV 090/9.0 mm: ""
+*FAdjV 095/9.5 mm: ""
+*FAdjV 100/10.0 mm: ""
+*CloseUI: *FAdjV
+*OpenUI *CAdjSgn/Cut or Peel Adjust Direction: PickOne
+*OrderDependency: 20 AnySetup *CAdjSgn
+*DefaultCAdjSgn: 0
+*CAdjSgn 0/+: ""
+*CAdjSgn 1/-: ""
+*CloseUI: *CAdjSgn
+*OpenUI *CAdjV/Cut or Peel Adjust Value: PickOne
+*OrderDependency: 20 AnySetup *CAdjV
+*DefaultCAdjV: 000
+*CAdjV 000/0.0 mm: ""
+*CAdjV 005/0.5 mm: ""
+*CAdjV 010/1.0 mm: ""
+*CAdjV 015/1.5 mm: ""
+*CAdjV 020/2.0 mm: ""
+*CAdjV 025/2.5 mm: ""
+*CAdjV 030/3.0 mm: ""
+*CAdjV 035/3.5 mm: ""
+*CAdjV 040/4.0 mm: ""
+*CAdjV 045/4.5 mm: ""
+*CAdjV 050/5.0 mm: ""
+*CAdjV 055/5.5 mm: ""
+*CAdjV 060/6.0 mm: ""
+*CAdjV 065/6.5 mm: ""
+*CAdjV 070/7.0 mm: ""
+*CAdjV 075/7.5 mm: ""
+*CAdjV 080/8.0 mm: ""
+*CAdjV 085/8.5 mm: ""
+*CAdjV 090/9.0 mm: ""
+*CAdjV 095/9.5 mm: ""
+*CAdjV 100/10.0 mm: ""
+*CloseUI: *CAdjV
+*OpenUI *RAdjSgn/Back Feed Direction: PickOne
+*OrderDependency: 20 AnySetup *RAdjSgn
+*DefaultRAdjSgn: 0
+*RAdjSgn 0/+: ""
+*RAdjSgn 1/-: ""
+*CloseUI: *RAdjSgn
+*OpenUI *RAdjV/Back Feed Adjust Value: PickOne
+*OrderDependency: 20 AnySetup *RAdjV
+*DefaultRAdjV: 00
+*RAdjV 00/0.0 mm: ""
+*RAdjV 05/0.5 mm: ""
+*RAdjV 10/1.0 mm: ""
+*RAdjV 15/1.5 mm: ""
+*RAdjV 20/2.0 mm: ""
+*RAdjV 25/2.5 mm: ""
+*RAdjV 30/3.0 mm: ""
+*RAdjV 35/3.5 mm: ""
+*RAdjV 40/4.0 mm: ""
+*RAdjV 45/4.5 mm: ""
+*RAdjV 50/5.0 mm: ""
+*RAdjV 55/5.5 mm: ""
+*RAdjV 60/6.0 mm: ""
+*RAdjV 65/6.5 mm: ""
+*RAdjV 70/7.0 mm: ""
+*RAdjV 75/7.5 mm: ""
+*RAdjV 80/8.0 mm: ""
+*RAdjV 85/8.5 mm: ""
+*RAdjV 90/9.0 mm: ""
+*RAdjV 95/9.5 mm: ""
+*CloseUI: *RAdjV
+*OpenUI *RbnAdjFwd/Ribbon Forward Adjust: PickOne
+*OrderDependency: 20 AnySetup *RbnAdjFwd
+*DefaultRbnAdjFwd: -00
+*RbnAdjFwd -00/0: ""
+*RbnAdjFwd -01/-1: ""
+*RbnAdjFwd -02/-2: ""
+*RbnAdjFwd -03/-3: ""
+*RbnAdjFwd -04/-4: ""
+*RbnAdjFwd -05/-5: ""
+*RbnAdjFwd -06/-6: ""
+*RbnAdjFwd -07/-7: ""
+*RbnAdjFwd -08/-8: ""
+*RbnAdjFwd -09/-9: ""
+*RbnAdjFwd -10/-10: ""
+*RbnAdjFwd -11/-11: ""
+*RbnAdjFwd -12/-12: ""
+*RbnAdjFwd -13/-13: ""
+*RbnAdjFwd -14/-14: ""
+*RbnAdjFwd -15/-15: ""
+*CloseUI: *RbnAdjFwd
+*OpenUI *RbnAdjBck/Ribbon Back Adjust: PickOne
+*OrderDependency: 20 AnySetup *RbnAdjBck
+*DefaultRbnAdjBck: -00
+*RbnAdjBck -00/0: ""
+*RbnAdjBck -01/-1: ""
+*RbnAdjBck -02/-2: ""
+*RbnAdjBck -03/-3: ""
+*RbnAdjBck -04/-4: ""
+*RbnAdjBck -05/-5: ""
+*RbnAdjBck -06/-6: ""
+*RbnAdjBck -07/-7: ""
+*RbnAdjBck -08/-8: ""
+*RbnAdjBck -09/-9: ""
+*RbnAdjBck -10/-10: ""
+*RbnAdjBck -11/-11: ""
+*RbnAdjBck -12/-12: ""
+*RbnAdjBck -13/-13: ""
+*RbnAdjBck -14/-14: ""
+*RbnAdjBck -15/-15: ""
+*CloseUI: *RbnAdjBck
 *CloseGroup: InstallableOptions
 *OpenGroup: PrinterSettings/Printer Settings
 *OpenUI *Darkness/Temperature: PickOne
@@ -361,119 +522,6 @@
 *tePrintRate 8/203 mm/sec.: ""
 *CloseUI: *tePrintRate
 *CloseGroup: PrinterSettings
-*OpenGroup: AdvancedSetting/Advanced Printer Settings
-*OpenUI *teGraphicsMode/Graphics Mode: PickOne
-*OrderDependency: 20 AnySetup *teGraphicsMode
-*DefaultteGraphicsMode: 1
-*teGraphicsMode 1/TOPIX Compression: ""
-*teGraphicsMode 2/Raw 8bit Graphics (overwrite): ""
-*teGraphicsMode 3/Raw 8bit Graphics (logic OR): ""
-*teGraphicsMode 4/Banded nibble (required for network/socket): ""
-*CloseUI: *teGraphicsMode
-*OpenUI *FAdjSgn/Feed Direction: PickOne
-*OrderDependency: 20 AnySetup *FAdjSgn
-*DefaultFAdjSgn: 0
-*FAdjSgn 0/+: ""
-*FAdjSgn 1/-: ""
-*CloseUI: *FAdjSgn
-*OpenUI *FAdjV/Feed Adjust Value: PickOne
-*OrderDependency: 20 AnySetup *FAdjV
-*DefaultFAdjV: 000
-*FAdjV 000/0.0 mm: ""
-*FAdjV 010/1.0 mm: ""
-*FAdjV 020/2.0 mm: ""
-*FAdjV 030/3.0 mm: ""
-*FAdjV 040/4.0 mm: ""
-*FAdjV 050/5.0 mm: ""
-*FAdjV 060/6.0 mm: ""
-*FAdjV 070/7.0 mm: ""
-*FAdjV 080/8.0 mm: ""
-*FAdjV 090/9.0 mm: ""
-*FAdjV 100/10.0 mm: ""
-*CloseUI: *FAdjV
-*OpenUI *CAdjSgn/Cut or Peel Adjust Direction: PickOne
-*OrderDependency: 20 AnySetup *CAdjSgn
-*DefaultCAdjSgn: 0
-*CAdjSgn 0/+: ""
-*CAdjSgn 1/-: ""
-*CloseUI: *CAdjSgn
-*OpenUI *CAdjV/Cut or Peel Adjust Value: PickOne
-*OrderDependency: 20 AnySetup *CAdjV
-*DefaultCAdjV: 000
-*CAdjV 000/0.0 mm: ""
-*CAdjV 010/1.0 mm: ""
-*CAdjV 020/2.0 mm: ""
-*CAdjV 030/3.0 mm: ""
-*CAdjV 040/4.0 mm: ""
-*CAdjV 050/5.0 mm: ""
-*CAdjV 060/6.0 mm: ""
-*CAdjV 070/7.0 mm: ""
-*CAdjV 080/8.0 mm: ""
-*CAdjV 090/9.0 mm: ""
-*CAdjV 100/10.0 mm: ""
-*CloseUI: *CAdjV
-*OpenUI *RAdjSgn/Back Feed Direction: PickOne
-*OrderDependency: 20 AnySetup *RAdjSgn
-*DefaultRAdjSgn: 0
-*RAdjSgn 0/+: ""
-*RAdjSgn 1/-: ""
-*CloseUI: *RAdjSgn
-*OpenUI *RAdjV/Back Feed Adjust Value: PickOne
-*OrderDependency: 20 AnySetup *RAdjV
-*DefaultRAdjV: 00
-*RAdjV 00/0.0 mm: ""
-*RAdjV 10/1.0 mm: ""
-*RAdjV 20/2.0 mm: ""
-*RAdjV 30/3.0 mm: ""
-*RAdjV 40/4.0 mm: ""
-*RAdjV 50/5.0 mm: ""
-*RAdjV 60/6.0 mm: ""
-*RAdjV 70/7.0 mm: ""
-*RAdjV 80/8.0 mm: ""
-*RAdjV 90/9.0 mm: ""
-*RAdjV 99/9.9 mm: ""
-*CloseUI: *RAdjV
-*OpenUI *RbnAdjFwd/Ribbon Forward Adjust: PickOne
-*OrderDependency: 20 AnySetup *RbnAdjFwd
-*DefaultRbnAdjFwd: -00
-*RbnAdjFwd -00/0: ""
-*RbnAdjFwd -01/-1: ""
-*RbnAdjFwd -02/-2: ""
-*RbnAdjFwd -03/-3: ""
-*RbnAdjFwd -04/-4: ""
-*RbnAdjFwd -05/-5: ""
-*RbnAdjFwd -06/-6: ""
-*RbnAdjFwd -07/-7: ""
-*RbnAdjFwd -08/-8: ""
-*RbnAdjFwd -09/-9: ""
-*RbnAdjFwd -10/-10: ""
-*RbnAdjFwd -11/-11: ""
-*RbnAdjFwd -12/-12: ""
-*RbnAdjFwd -13/-13: ""
-*RbnAdjFwd -14/-14: ""
-*RbnAdjFwd -15/-15: ""
-*CloseUI: *RbnAdjFwd
-*OpenUI *RbnAdjBck/Ribbon Back Adjust: PickOne
-*OrderDependency: 20 AnySetup *RbnAdjBck
-*DefaultRbnAdjBck: -00
-*RbnAdjBck -00/0: ""
-*RbnAdjBck -01/-1: ""
-*RbnAdjBck -02/-2: ""
-*RbnAdjBck -03/-3: ""
-*RbnAdjBck -04/-4: ""
-*RbnAdjBck -05/-5: ""
-*RbnAdjBck -06/-6: ""
-*RbnAdjBck -07/-7: ""
-*RbnAdjBck -08/-8: ""
-*RbnAdjBck -09/-9: ""
-*RbnAdjBck -10/-10: ""
-*RbnAdjBck -11/-11: ""
-*RbnAdjBck -12/-12: ""
-*RbnAdjBck -13/-13: ""
-*RbnAdjBck -14/-14: ""
-*RbnAdjBck -15/-15: ""
-*CloseUI: *RbnAdjBck
-*CloseGroup: AdvancedSetting
 *DefaultFont: Courier
 *Font AvantGarde-Book: Standard "(1.05)" Standard ROM
 *Font AvantGarde-BookOblique: Standard "(1.05)" Standard ROM
@@ -510,4 +558,4 @@
 *Font Times-Roman: Standard "(1.05)" Standard ROM
 *Font ZapfChancery-MediumItalic: Standard "(1.05)" Standard ROM
 *Font ZapfDingbats: Special "(001.005)" Special ROM
-*% End of tecb852r.ppd, 24154 bytes.
+*% End of tecb852r.ppd, 25779 bytes.

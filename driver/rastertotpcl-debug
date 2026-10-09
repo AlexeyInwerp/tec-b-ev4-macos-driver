@@ -5,7 +5,7 @@
 # and tees both the incoming CUPS raster and the outgoing TPCL to a dump
 # directory, so a job can be replayed and decoded without a printer attached.
 #
-#   Dumps:  $TPCL_DUMP_DIR (default /tmp/tpcl-debug)
+#   Dumps:  $TPCL_DUMP_DIR (default /tmp/tpcl-debug): .raster, .tpcl and .options
 #   Replay: lp -d <queue> -o raw /tmp/tpcl-debug/<stamp>.tpcl
 #   Decode: tools/tpcldecode.py /tmp/tpcl-debug/<stamp>.tpcl
 
@@ -27,6 +27,19 @@ SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 RASTER="$DUMP_DIR/$STAMP.raster"
 TPCL="$DUMP_DIR/$STAMP.tpcl"
+OPTIONS="$DUMP_DIR/$STAMP.options"
+
+# Record exactly what the application asked for. This is the dependable way to
+# answer "did the app or the driver get it wrong": CUPS does not reliably keep a
+# finished job's options, but the filter is handed them on every job. Chrome was
+# found sending Resolution=300dpi to a 203 dpi printer this way.
+{
+  echo "job=$1 user=$2 title=$3 copies=$4"
+  echo "options=$5"
+  echo
+  # one per line, so it is readable and greppable
+  printf '%s\n' "$5" | tr ' ' '\n' | sed 's/^/  /'
+} > "$OPTIONS" 2>/dev/null
 
 # Tee the raster in, run the real filter, tee the TPCL out.
 tee "$RASTER" | "$SELF_DIR/rastertotpcl" "$@" | tee "$TPCL"

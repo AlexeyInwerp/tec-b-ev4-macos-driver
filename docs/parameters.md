@@ -68,7 +68,7 @@ the printer and the media loaded in it, set once:
 | | |
 | --- | --- |
 | Paper Size, Orientation | |
-| Resolution, Media Type | |
+| Resolution, Media Type | Resolution is fixed by the print head and each driver offers only the one it has; see TROUBLESHOOTING |
 | Temperature (darkness), Print Speed | |
 | Print Mode, Cutter Option | |
 

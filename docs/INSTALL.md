@@ -125,9 +125,17 @@ fixed from this end:
 > ports 80, 515 and 8000 only — no mDNS, no SNMP on 161 — so there is nothing
 > to ask, and nothing to match a driver against.
 
-Set **Use → Select Software…** and choose **Toshiba Tec B-EV4D-GS14**
-(or `…B-EV4T-GS14` for a 300 dpi thermal-transfer model). Typing "B-EV4" in the
-search box finds it.
+Set **Use → Select Software…** and choose the driver for your print head.
+Typing "B-EV4" in the search box finds them:
+
+| Driver | Print head |
+| --- | --- |
+| **Toshiba Tec B-EV4D-GS14** | 203 dpi, direct thermal — the one this was developed on |
+| **Toshiba Tec B-EV4D-TS14** | 300 dpi, direct thermal — untested |
+| Toshiba Tec B-EV4T-GS14 | thermal transfer — untested, still lists both 203 and 300 dpi |
+
+Pick the one matching your hardware: a print head has exactly one resolution,
+and a driver that disagrees prints at the wrong size.
 
 Over **USB** it is different: the printer reports an IEEE-1284 device ID, the
 PPD declares a matching `*1284DeviceID`, and macOS selects the driver by itself.

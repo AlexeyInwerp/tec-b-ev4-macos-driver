@@ -103,6 +103,25 @@ static unsigned char *GrayBuffer;     /* 8-bit input line, when thresholding */
 static unsigned int   GrayBytes;      /* Its length */
 static int    Threshold = 128;        /* Ink at or above this grey level */
 
+/*
+ * Rescaling to the print head's real resolution.
+ *
+ * A head has exactly one resolution, but the job can ask the rasteriser for any
+ * the PPD offers - and Chrome always picks the highest. A 300 dpi raster sent
+ * to a 203 dpi head prints about 1.5x too large, so when the two disagree the
+ * grey raster is box-filtered down to the head's resolution before it is
+ * thresholded. Only models whose head resolution is known are rescaled.
+ */
+static int            HeadDPI;           /* Head resolution, 0 = unknown */
+static int            Resample;          /* Non-zero while rescaling this page */
+static unsigned int   SrcWidth, SrcHeight; /* Raster as received */
+static unsigned int   RowOut;            /* Next output row to emit */
+static double         RowWeight;         /* Vertical weight in RowAcc so far */
+static double         ScaleX, ScaleY;    /* Output size / input size */
+static double         *RowAcc;           /* Output row being accumulated */
+static double         *RowLine;          /* One input row, horizontally scaled */
+static double         *RowPrefix;        /* Prefix sums of one input row */
+
 static unsigned char  *BandBuffer;    /* Nibble data for the current band */
 static int    BandBytes;              /* Bytes currently in BandBuffer */
 static int    BandLines;              /* Raster lines currently in BandBuffer */
@@ -119,6 +138,9 @@ void CancelJob(int sig);
 void OutputLine(ppd_file_t *ppd, cups_page_header2_t *header, int y);
 
 void FlushBand(cups_page_header2_t *header);
+void EmitRow(ppd_file_t *ppd, cups_page_header2_t *header, unsigned int y);
+void ResampleRow(ppd_file_t *ppd, cups_page_header2_t *header, unsigned int r);
+void FlushResample(ppd_file_t *ppd, cups_page_header2_t *header);
 void TOPIXCompress(ppd_file_t *ppd, cups_page_header2_t *header, int y);
 void TOPIXCompressOutputBuffer(ppd_file_t *ppd, cups_page_header2_t *header, int y);
 
@@ -725,6 +747,12 @@ EndPage(ppd_file_t *ppd,		/* I - PPD file */
     free(GrayBuffer);
     GrayBytes = 0;
   }
+  if (Resample) {
+    free(RowAcc);
+    free(RowLine);
+    free(RowPrefix);
+    Resample = 0;
+  }
   free(Buffer);
 }
 
@@ -740,6 +768,161 @@ CancelJob(int sig)			/* I - Signal */
   */
   (void)sig;
   Canceled = 1;
+}
+
+
+
+/*
+ * 'HeadResolution()' - Resolution of this model's print head, or 0 if unknown.
+ *
+ * Keyed on the PPD's model name rather than a PPD attribute so that a queue
+ * still holding an older PPD - which is exactly the case where Chrome can
+ * still pick a resolution the head lacks - is covered too. The T and other
+ * models are left out deliberately: their head resolution is not known.
+ */
+static int
+HeadResolution(ppd_file_t *ppd)
+{
+  static const struct { const char *model; int dpi; } heads[] =
+  {
+    { "B-EV4D-GS14", 203 },
+    { "B-EV4D-TS14", 300 }
+  };
+  size_t i;
+
+  if (!ppd || !ppd->modelname)
+    return (0);
+
+  for (i = 0; i < sizeof(heads) / sizeof(heads[0]); i ++)
+    if (strstr(ppd->modelname, heads[i].model))
+      return (heads[i].dpi);
+
+  return (0);
+}
+
+
+/*
+ * 'ResolutionMismatch()' - Is the raster far enough from the head to rescale?
+ *
+ * Within 5% it is left alone. Rescaling by a factor close to 1 gains almost
+ * nothing in size but a non-integer box filter can move a barcode's bar edges
+ * by a whole dot, which costs more than a 1-2% size error does.
+ */
+static int
+ResolutionMismatch(unsigned int raster, int head)
+{
+  double r = raster;
+
+  return (head > 0 && raster > 0 && (r > head * 1.05 || r < head * 0.95));
+}
+
+
+/*
+ * 'EmitRow()' - Send one output row, never past the end of the physical label.
+ */
+void
+EmitRow(ppd_file_t          *ppd,       /* I - PPD file */
+        cups_page_header2_t *header,    /* I - Page header */
+        unsigned int        y)          /* I - Output row */
+{
+  if (MaxLines && y >= (unsigned int)MaxLines)
+  {
+    if (y == (unsigned int)MaxLines)
+      fprintf(stderr, "INFO: job is %u lines but the loaded label holds "
+                      "%d; the remainder is not printed\n",
+              header->cupsHeight, MaxLines);
+    return;   /* the raster is still drained by the caller */
+  }
+
+  OutputLine(ppd, header, y);
+}
+
+
+/*
+ * 'EmitAcc()' - Threshold the accumulated output row and send it.
+ */
+static void
+EmitAcc(ppd_file_t *ppd, cups_page_header2_t *header)
+{
+  unsigned int x;
+
+  if (RowOut < header->cupsHeight && RowWeight > 0.0)
+  {
+    memset(Buffer, 0, header->cupsBytesPerLine);
+    for (x = 0; x < header->cupsWidth; x ++)
+      if (RowAcc[x] / RowWeight >= Threshold)
+        Buffer[x / 8] |= (unsigned char)(0x80 >> (x & 7));
+
+    EmitRow(ppd, header, RowOut);
+  }
+
+  RowOut ++;
+  RowWeight = 0.0;
+  memset(RowAcc, 0, header->cupsWidth * sizeof(double));
+}
+
+
+/*
+ * 'ResampleRow()' - Fold one input row (in GrayBuffer) into the output.
+ *
+ * A streaming box filter: area-weighted horizontally via prefix sums, then
+ * spread across the output rows this input row overlaps, emitting each output
+ * row as soon as it is complete.
+ */
+void
+ResampleRow(ppd_file_t          *ppd,     /* I - PPD file */
+            cups_page_header2_t *header,  /* I - Page header (output geometry) */
+            unsigned int        r)        /* I - Input row number */
+{
+  unsigned int x, i;
+  double       a, b, fa, fb, top, bot, jend, take;
+
+  RowPrefix[0] = 0.0;
+  for (i = 0; i < SrcWidth; i ++)
+    RowPrefix[i + 1] = RowPrefix[i] + GrayBuffer[i];
+
+  for (x = 0; x < header->cupsWidth; x ++)
+  {
+    a = x / ScaleX;
+    b = (x + 1) / ScaleX;
+    if (b > SrcWidth)
+      b = SrcWidth;
+
+    i  = (unsigned int)a;
+    fa = RowPrefix[i] + (i < SrcWidth ? (a - i) * GrayBuffer[i] : 0.0);
+    i  = (unsigned int)b;
+    fb = RowPrefix[i] + (i < SrcWidth ? (b - i) * GrayBuffer[i] : 0.0);
+
+    RowLine[x] = (b > a) ? (fb - fa) / (b - a) : 0.0;
+  }
+
+  top = r * ScaleY;
+  bot = (r + 1) * ScaleY;
+
+  while (top < bot - 1e-9)
+  {
+    jend = RowOut + 1;
+    take = (bot < jend ? bot : jend) - top;
+
+    for (x = 0; x < header->cupsWidth; x ++)
+      RowAcc[x] += RowLine[x] * take;
+    RowWeight += take;
+    top       += take;
+
+    if (top >= jend - 1e-9)
+      EmitAcc(ppd, header);
+  }
+}
+
+
+/*
+ * 'FlushResample()' - Emit any partly accumulated final output row.
+ */
+void
+FlushResample(ppd_file_t *ppd, cups_page_header2_t *header)
+{
+  if (RowWeight > 1e-6 && RowOut < header->cupsHeight)
+    EmitAcc(ppd, header);
 }
 
 
@@ -1041,7 +1224,52 @@ main(int  argc,				/* I - Number of command-line arguments */
       header.cupsBitsPerPixel = 1;
       header.cupsBytesPerLine = (header.cupsWidth + 7) / 8;
       fprintf(stderr, "DEBUG: thresholding 8-bit grey at %d\n", Threshold);
+
+     /*
+      * If the raster is not at the head's resolution, rescale it. Output
+      * geometry replaces the header's; the input geometry is kept to drive the
+      * read loop. Anything that cannot be rescaled safely is left alone.
+      */
+      HeadDPI  = HeadResolution(ppd);
+      Resample = 0;
+      if (ResolutionMismatch(header.HWResolution[0], HeadDPI))
+      {
+        double       s  = (double)HeadDPI / header.HWResolution[0];
+        unsigned int ow = (unsigned int)(header.cupsWidth  * s + 0.5);
+        unsigned int oh = (unsigned int)(header.cupsHeight * s + 0.5);
+
+        if (ow > 0 && oh > 0 &&
+            (RowAcc    = calloc(ow, sizeof(double))) != NULL &&
+            (RowLine   = calloc(ow, sizeof(double))) != NULL &&
+            (RowPrefix = calloc(header.cupsWidth + 1, sizeof(double))) != NULL)
+        {
+          fprintf(stderr, "DEBUG: raster is %u dpi but this head is %d dpi; "
+                          "rescaling %ux%u -> %ux%u\n",
+                  header.HWResolution[0], HeadDPI, header.cupsWidth,
+                  header.cupsHeight, ow, oh);
+
+          SrcWidth                = header.cupsWidth;
+          SrcHeight               = header.cupsHeight;
+          header.cupsWidth        = ow;
+          header.cupsHeight       = oh;
+          header.cupsBytesPerLine = (ow + 7) / 8;
+          header.HWResolution[0]  = header.HWResolution[1] = HeadDPI;
+          ScaleX                  = (double)ow / SrcWidth;
+          ScaleY                  = (double)oh / SrcHeight;
+          RowOut                  = 0;
+          RowWeight               = 0.0;
+          Resample                = 1;
+        }
+        else
+          fprintf(stderr, "WARNING: cannot rescale %u dpi raster to %d dpi\n",
+                  header.HWResolution[0], HeadDPI);
+      }
     }
+    else if (ResolutionMismatch(header.HWResolution[0], HeadResolution(ppd)))
+      fprintf(stderr, "WARNING: raster is %u dpi but this head is %d dpi, and "
+                      "it is not 8-bit grey so it cannot be rescaled; output "
+                      "will be the wrong size\n",
+              header.HWResolution[0], HeadResolution(ppd));
 
     /*
      * Write a status message with the page number and number of copies.
@@ -1057,14 +1285,14 @@ main(int  argc,				/* I - Number of command-line arguments */
     /*
      * Loop for each line on the page...
      */
-    for (y = 0; y < header.cupsHeight && !Canceled; y++)
+    for (y = 0; y < (Resample ? SrcHeight : header.cupsHeight) && !Canceled; y++)
     {
       /*
        * Let the user know how far we have progressed...
        */
       if ((y & 15) == 0)
         fprintf(stderr, "INFO: Printing page %d, %d%% complete...\n", Page,
-	        100 * y / header.cupsHeight);
+	        100 * y / (Resample ? SrcHeight : header.cupsHeight));
 
       /*
        * Read a line of graphics...
@@ -1075,6 +1303,12 @@ main(int  argc,				/* I - Number of command-line arguments */
 
         if (cupsRasterReadPixels(ras, GrayBuffer, GrayBytes) < 1)
           break;
+
+        if (Resample)
+        {
+          ResampleRow(ppd, &header, y);
+          continue;
+        }
 
        /*
         * CUPS_CSPACE_K is ink coverage: 0 is bare media, 255 is full black.
@@ -1089,19 +1323,14 @@ main(int  argc,				/* I - Number of command-line arguments */
 
       /*
        * Write it to the printer - but never past the end of the physical
-       * label, or the overflow prints onto the next one.
+       * label, or the overflow prints onto the next one. Rows past the end
+       * are still read, so the raster stream stays in sync.
        */
-      if (MaxLines && y >= MaxLines)
-      {
-        if (y == MaxLines)
-          fprintf(stderr, "INFO: job is %u lines but the loaded label holds "
-                          "%d; the remainder is not printed\n",
-                  header.cupsHeight, MaxLines);
-        continue;   /* keep draining the raster so the stream stays in sync */
-      }
-
-      OutputLine(ppd, &header, y);
+      EmitRow(ppd, &header, y);
     }
+
+    if (Resample)
+      FlushResample(ppd, &header);
 
     /*
      * Eject the page...

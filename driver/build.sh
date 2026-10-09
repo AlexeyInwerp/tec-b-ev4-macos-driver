@@ -45,6 +45,11 @@ trap 'rm -f "$BUILD_DRV"' EXIT
 
 if command -v ppdc >/dev/null 2>&1; then
   ppdc "$BUILD_DRV" 2>&1 | grep -v "Unable to find #po file" || true
+  # Keep the checked-in fallback current. It had been left at the upstream 1.4
+  # build, so anyone building without ppdc silently got a driver missing every
+  # feature added since. Taken before the filter path is rewritten below, so it
+  # stays generic.
+  rm -rf ppd-prebuilt && cp -r ppd ppd-prebuilt
 elif [ -d ppd-prebuilt ]; then
   # ppdc was removed from some systems; fall back to the checked-in PPDs.
   echo "    ppdc not found - using prebuilt PPDs"

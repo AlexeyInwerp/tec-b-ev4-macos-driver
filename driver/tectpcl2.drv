@@ -489,6 +489,11 @@ Group "InstallableOptions/Installable Options"
         Choice "4/101.6 mm/sec." ""  
         Choice "5/127.0 mm/sec." ""  
 
+    // A print head has exactly one resolution. The upstream file listed both 203
+    // and 300 dpi under a single model, which invited the wrong one: Chrome
+    // always picks 300, the rasteriser then renders 1179 dots across, and a
+    // 203 dpi head prints them ~1.5x too large. So each head gets its own PPD
+    // offering only the resolution it really has.
     {
        ModelName "B-EV4D-GS14"
        PCFileName "tecbev4d.ppd"
@@ -496,7 +501,17 @@ Group "InstallableOptions/Installable Options"
        MinSize 71 23
        MaxSize 306 1726
        *Resolution k 1 0 0 0 "203dpi/203 dpi (G models - 8 dots-mm)"
-       Resolution k 1 0 0 0 "300dpi/300 dpi (T models - 12 dots-mm)"
+       Group "General/General"
+         Option "MediaType/Media Type" PickOne AnySetup 20 
+           *Choice "Direct/Direct Thermal" "<</MediaType(Direct)>>setpagedevice"
+     }
+     {
+       ModelName "B-EV4D-TS14"
+       PCFileName "tecbev4d3.ppd"
+       VariablePaperSize Yes
+       MinSize 71 23
+       MaxSize 306 1726
+       *Resolution k 1 0 0 0 "300dpi/300 dpi (T models - 12 dots-mm)"
        Group "General/General"
          Option "MediaType/Media Type" PickOne AnySetup 20 
            *Choice "Direct/Direct Thermal" "<</MediaType(Direct)>>setpagedevice"

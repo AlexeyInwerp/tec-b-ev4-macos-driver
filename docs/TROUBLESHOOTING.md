@@ -104,6 +104,68 @@ which is the usual cause of a cropped label — see above. macOS remembers paper
 size **per document** in some apps, so a label that once printed at 200 mm will
 keep doing so until you change it there.
 
+## Printing from Chrome comes out about 1.5x too large
+
+Only Chrome, and only on this printer, while Preview and Safari are fine.
+
+**Cause.** Chrome reads the PPD's resolution choices and asks for the highest.
+The PPD for the 203 dpi model also offered a 300 dpi choice, so Chrome sent
+`Resolution=300dpi`. The rasteriser obliged and rendered 1179 dots across
+instead of 798; the filter passed all of them to a head that has 203 dots per
+inch, so the image printed 300 / 203 = **1.48x too large** and the label edge
+cropped what overflowed. Other printers never showed it because a 300 dpi
+request is harmless to a laser that really has that resolution.
+
+```
+Resolution=203dpi  ->  raster  798 x 1198  ->  graphic  800 dots wide  ->  100 mm
+Resolution=300dpi  ->  raster 1179 x 1771  ->  graphic 1184 dots wide  ->  148 mm
+```
+
+Preview never asks for a resolution, so it always got the PPD default of 203.
+
+**Fixed in two places.**
+
+1. The PPD for the 203 dpi model (**Toshiba Tec B-EV4D-GS14**) now offers *only*
+   203 dpi, so there is nothing wrong for Chrome to pick. A separate PPD,
+   **B-EV4D-TS14**, offers only 300 dpi for the other head.
+2. If a raster still arrives at the wrong resolution — a queue holding an older
+   PPD, say — the filter box-filters it down to the head's real resolution
+   before thresholding. Rasters within 5% of the head are left alone, since
+   rescaling by a factor that close to 1 can shift a barcode edge by a dot for
+   a 1-2% size gain.
+
+The second one is why installing the package fixes it even before you re-apply
+the PPD to an existing queue. It only applies to models whose head resolution
+is known (the two above); it cannot rescale a 1-bit raster, which is what
+*Image Rendering → Dithered* produces, and logs a warning instead.
+
+**To confirm your queue is current:**
+
+```sh
+grep '^\*Resolution' /etc/cups/ppd/<queue>.ppd     # a 203 dpi model: only 203dpi
+```
+
+Quit and reopen Chrome afterwards — it caches a printer's capabilities.
+
+### Seeing what an application actually sent
+
+When a label comes out wrong, the question is whether the app or the driver
+asked for the wrong thing. Install with a debug queue (`sudo DEBUG_QUEUE=1
+driver/install.sh`), print once, and read the sidecar the debug filter writes:
+
+```sh
+cat /tmp/tpcl-debug/*.options
+```
+
+```
+job=391 user=inwerp title=Ripperdoc copies=1
+options=PageSize=w283h425 Resolution=300dpi print-color-mode=monochrome ...
+```
+
+That is how the 300 dpi request was pinned on Chrome. (CUPS's own job history
+would seem the obvious place to look, but it did not reliably retain a finished
+job's options, so do not depend on it.)
+
 ## Barcodes print speckled, lines look noisy or juddered
 
 Not the printer, and not darkness. The rasteriser was **halftoning** the page.
