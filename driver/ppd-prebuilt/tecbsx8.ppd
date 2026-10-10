@@ -22,7 +22,7 @@
 *% 
 *% 
 *FormatVersion: "4.3"
-*FileVersion: "1.0.3"
+*FileVersion: "1.0.4"
 *LanguageVersion: English
 *LanguageEncoding: ISOLatin1
 *PCFileName: "tecbsx8.ppd"
@@ -30,7 +30,7 @@
 *Manufacturer: "Toshiba Tec"
 *ModelName: "Toshiba Tec B-SX8"
 *ShortNickName: "Toshiba Tec B-SX8"
-*NickName: "Toshiba Tec B-SX8, 1.0.3"
+*NickName: "Toshiba Tec B-SX8, 1.0.4"
 *PSVersion: "(3010.000) 81501"
 *LanguageLevel: "3"
 *ColorDevice: False
@@ -337,6 +337,31 @@
 *PrintOrient 2/Mirror Print Top Leading: ""
 *PrintOrient 3/Mirror Print Bottom Leading: ""
 *CloseUI: *PrintOrient
+*OpenUI *Darkness/Darkness: PickOne
+*OrderDependency: 20 AnySetup *Darkness
+*DefaultDarkness: 11
+*Darkness 1/-10: "<</cupsCompression 1>>setpagedevice"
+*Darkness 2/-9: "<</cupsCompression 2>>setpagedevice"
+*Darkness 3/-8: "<</cupsCompression 3>>setpagedevice"
+*Darkness 4/-7: "<</cupsCompression 4>>setpagedevice"
+*Darkness 5/-6: "<</cupsCompression 5>>setpagedevice"
+*Darkness 6/-5: "<</cupsCompression 6>>setpagedevice"
+*Darkness 7/-4: "<</cupsCompression 7>>setpagedevice"
+*Darkness 8/-3: "<</cupsCompression 8>>setpagedevice"
+*Darkness 9/-2: "<</cupsCompression 9>>setpagedevice"
+*Darkness 10/-1: "<</cupsCompression 10>>setpagedevice"
+*Darkness 11/0: "<</cupsCompression 11>>setpagedevice"
+*Darkness 12/+1: "<</cupsCompression 12>>setpagedevice"
+*Darkness 13/+2: "<</cupsCompression 13>>setpagedevice"
+*Darkness 14/+3: "<</cupsCompression 14>>setpagedevice"
+*Darkness 15/+4: "<</cupsCompression 15>>setpagedevice"
+*Darkness 16/+5: "<</cupsCompression 16>>setpagedevice"
+*Darkness 17/+6: "<</cupsCompression 17>>setpagedevice"
+*Darkness 18/+7: "<</cupsCompression 18>>setpagedevice"
+*Darkness 19/+8: "<</cupsCompression 19>>setpagedevice"
+*Darkness 20/+9: "<</cupsCompression 20>>setpagedevice"
+*Darkness 21/+10: "<</cupsCompression 21>>setpagedevice"
+*CloseUI: *Darkness
 *OpenUI *MediaType/Media Type: PickOne
 *OrderDependency: 20 AnySetup *MediaType
 *DefaultMediaType: Direct
@@ -350,6 +375,13 @@
 *Resolution 203dpi/203 DPI: "<</HWResolution[203 203]/cupsBitsPerColor 1/cupsRowCount 0/cupsRowFeed 0/cupsRowStep 0/cupsColorSpace 3>>setpagedevice"
 *Resolution 300dpi/300 DPI: "<</HWResolution[300 300]/cupsBitsPerColor 1/cupsRowCount 0/cupsRowFeed 0/cupsRowStep 0/cupsColorSpace 3>>setpagedevice"
 *CloseUI: *Resolution
+*OpenUI *tePrintRate/Print Speed: PickOne
+*OrderDependency: 20 AnySetup *tePrintRate
+*DefaulttePrintRate: 4
+*tePrintRate 3/76 mm/sec.: ""
+*tePrintRate 4/101 mm/sec.: ""
+*tePrintRate 8/203 mm/sec.: ""
+*CloseUI: *tePrintRate
 *OpenGroup: InstallableOptions/Installable Options
 *OpenUI *Cutter/Cutter unit (accessory): Boolean
 *OrderDependency: 10 AnySetup *Cutter
@@ -396,14 +428,6 @@
 *teMediaTracking 3/Transmissive - label gap (alt): ""
 *teMediaTracking 4/Reflective - black mark (alt): ""
 *CloseUI: *teMediaTracking
-*OpenUI *teGraphicsMode/Graphics Mode: PickOne
-*OrderDependency: 20 AnySetup *teGraphicsMode
-*DefaultteGraphicsMode: 1
-*teGraphicsMode 1/TOPIX Compression: ""
-*teGraphicsMode 2/Raw 8bit Graphics (overwrite): ""
-*teGraphicsMode 3/Raw 8bit Graphics (logic OR): ""
-*teGraphicsMode 4/Banded nibble (required for network/socket): ""
-*CloseUI: *teGraphicsMode
 *OpenUI *FAdjSgn/Feed Direction: PickOne
 *OrderDependency: 20 AnySetup *FAdjSgn
 *DefaultFAdjSgn: 0
@@ -536,33 +560,16 @@
 *RbnAdjBck -14/-14: ""
 *RbnAdjBck -15/-15: ""
 *CloseUI: *RbnAdjBck
+*OpenUI *teGraphicsMode/Graphics Mode: PickOne
+*OrderDependency: 20 AnySetup *teGraphicsMode
+*DefaultteGraphicsMode: 1
+*teGraphicsMode 1/TOPIX Compression: ""
+*teGraphicsMode 2/Raw 8bit Graphics (overwrite): ""
+*teGraphicsMode 3/Raw 8bit Graphics (logic OR): ""
+*teGraphicsMode 4/Banded nibble (uncompressed, small commands): ""
+*CloseUI: *teGraphicsMode
 *CloseGroup: InstallableOptions
-*OpenGroup: PrinterSettings/Printer Settings
-*OpenUI *Darkness/Temperature: PickOne
-*OrderDependency: 20 AnySetup *Darkness
-*DefaultDarkness: 11
-*Darkness 1/-10: "<</cupsCompression 1>>setpagedevice"
-*Darkness 2/-9: "<</cupsCompression 2>>setpagedevice"
-*Darkness 3/-8: "<</cupsCompression 3>>setpagedevice"
-*Darkness 4/-7: "<</cupsCompression 4>>setpagedevice"
-*Darkness 5/-6: "<</cupsCompression 5>>setpagedevice"
-*Darkness 6/-5: "<</cupsCompression 6>>setpagedevice"
-*Darkness 7/-4: "<</cupsCompression 7>>setpagedevice"
-*Darkness 8/-3: "<</cupsCompression 8>>setpagedevice"
-*Darkness 9/-2: "<</cupsCompression 9>>setpagedevice"
-*Darkness 10/-1: "<</cupsCompression 10>>setpagedevice"
-*Darkness 11/0: "<</cupsCompression 11>>setpagedevice"
-*Darkness 12/+1: "<</cupsCompression 12>>setpagedevice"
-*Darkness 13/+2: "<</cupsCompression 13>>setpagedevice"
-*Darkness 14/+3: "<</cupsCompression 14>>setpagedevice"
-*Darkness 15/+4: "<</cupsCompression 15>>setpagedevice"
-*Darkness 16/+5: "<</cupsCompression 16>>setpagedevice"
-*Darkness 17/+6: "<</cupsCompression 17>>setpagedevice"
-*Darkness 18/+7: "<</cupsCompression 18>>setpagedevice"
-*Darkness 19/+8: "<</cupsCompression 19>>setpagedevice"
-*Darkness 20/+9: "<</cupsCompression 20>>setpagedevice"
-*Darkness 21/+10: "<</cupsCompression 21>>setpagedevice"
-*CloseUI: *Darkness
+*OpenGroup: PrinterSettings/Cutter and Strip-off
 *OpenUI *tePrintMode/Print Mode: PickOne
 *OrderDependency: 20 AnySetup *tePrintMode
 *DefaulttePrintMode: 0
@@ -576,15 +583,8 @@
 *DefaultteCutter: 0
 *teCutter 0/No Cut: "<</cupsRowStep 0>>setpagedevice"
 *teCutter 1/Cut Every Label: "<</cupsRowStep 1>>setpagedevice"
-*teCutter 2/Cut Every 2 Labels : "<</cupsRowStep 999>>setpagedevice"
+*teCutter 2/Cut Every 2 Labels: "<</cupsRowStep 2>>setpagedevice"
 *CloseUI: *teCutter
-*OpenUI *tePrintRate/Print Speed: PickOne
-*OrderDependency: 20 AnySetup *tePrintRate
-*DefaulttePrintRate: 4
-*tePrintRate 3/76 mm/sec.: ""
-*tePrintRate 4/101 mm/sec.: ""
-*tePrintRate 8/203 mm/sec.: ""
-*CloseUI: *tePrintRate
 *CloseGroup: PrinterSettings
 *DefaultFont: Courier
 *Font AvantGarde-Book: Standard "(1.05)" Standard ROM
@@ -622,4 +622,4 @@
 *Font Times-Roman: Standard "(1.05)" Standard ROM
 *Font ZapfChancery-MediumItalic: Standard "(1.05)" Standard ROM
 *Font ZapfDingbats: Special "(001.005)" Special ROM
-*% End of tecbsx8.ppd, 30092 bytes.
+*% End of tecbsx8.ppd, 30091 bytes.

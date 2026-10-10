@@ -216,6 +216,11 @@ darkness, speed, media size, sensor. Note what you have first:
 lpoptions -p TEC_B_EV4
 ```
 
+**The filter and the PPD ship as a pair.** A PPD from 1.0.4 or later has no
+Graphics Mode option for the B-EV4, and a filter older than that crashes when it
+goes looking for it. The package and `update.sh` install the filter first, which
+is safe; just do not copy a newer PPD onto a machine running an older filter.
+
 Updating the *filter* alone needs none of this: the binary is executed fresh for
 every job, so replacing it takes effect immediately and queue settings are
 untouched. That is the common case, and it is what `driver/update.sh` does when

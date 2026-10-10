@@ -130,8 +130,12 @@ Group "General/General"
     Choice "2/Mirror Print Top Leading" ""
     Choice "3/Mirror Print Bottom Leading" ""
 
-Group "PrinterSettings/Printer Settings"
-  Option "Darkness/Temperature" PickOne AnySetup 20
+// Quality settings live in General, beside Image Rendering, so the print
+// dialog's first panel holds everything that changes how a label looks and how
+// fast it comes out. They used to sit in a "Printer Settings" feature set that
+// you had to pick from a menu to even see.
+Group "General/General"
+  Option "Darkness/Darkness" PickOne AnySetup 20
     Choice "1/-10" "<</cupsCompression 1>>setpagedevice"
     Choice "2/-9" "<</cupsCompression 2>>setpagedevice"
     Choice "3/-8" "<</cupsCompression 3>>setpagedevice"
@@ -153,6 +157,7 @@ Group "PrinterSettings/Printer Settings"
     Choice "19/+8" "<</cupsCompression 19>>setpagedevice"
     Choice "20/+9" "<</cupsCompression 20>>setpagedevice"
     Choice "21/+10" "<</cupsCompression 21>>setpagedevice"
+Group "PrinterSettings/Cutter and Strip-off"
   Option "tePrintMode/Print Mode" PickOne AnySetup 20
     *Choice "0/Batch" ""
     Choice "1/Peel Off Cell Active" ""
@@ -161,7 +166,7 @@ Group "PrinterSettings/Printer Settings"
   Option "teCutter/Cutter Option" PickOne AnySetup 20
     *Choice "0/No Cut" "<</cupsRowStep 0>>setpagedevice"
     Choice "1/Cut Every Label" "<</cupsRowStep 1>>setpagedevice"
-    Choice "2/Cut Every 2 Labels " "<</cupsRowStep 999>>setpagedevice"
+    Choice "2/Cut Every 2 Labels" "<</cupsRowStep 2>>setpagedevice"
 
 
 Group "InstallableOptions/Installable Options"
@@ -190,11 +195,6 @@ Group "InstallableOptions/Installable Options"
     Choice "3/Transmissive - label gap (alt)" ""
     Choice "4/Reflective - black mark (alt)" ""
 
-  Option "teGraphicsMode/Graphics Mode" PickOne AnySetup 20
-    *Choice "1/TOPIX Compression" ""
-    Choice "2/Raw 8bit Graphics (overwrite)" ""
-    Choice "3/Raw 8bit Graphics (logic OR)" ""
-    Choice "4/Banded nibble (required for network/socket)" ""
   Option "FAdjSgn/Feed Direction" PickOne AnySetup 20
     *Choice "0/+" ""
      Choice "1/-" ""
@@ -309,6 +309,7 @@ Group "InstallableOptions/Installable Options"
 
   // printer BSA4G an BSA4T
   {
+    #include "graphicsmode.h"
     ModelName "B-SA4G/T"
     PCFileName "tecbsa4.ppd"
     VariablePaperSize Yes
@@ -321,7 +322,7 @@ Group "InstallableOptions/Installable Options"
       Option "MediaType/Media Type" PickOne AnySetup 20
         *Choice "Direct/Direct Thermal" "<</MediaType(Direct)>>setpagedevice"
         Choice "Thermal/Thermal Transfer" "<</MediaType(Thermal)>>setpagedevice"
-    Group "PrinterSettings/Printer Settings"
+    Group "General/General"
       Option "tePrintRate/Print Speed" PickOne AnySetup 20
         Choice "2/50 mm/sec." ""
         *Choice "4/101 mm/sec." ""
@@ -330,6 +331,7 @@ Group "InstallableOptions/Installable Options"
 
   // TEC B-SX Range
   {
+    #include "graphicsmode.h"
     Group "General/General"
       Option "MediaType/Media Type" PickOne AnySetup 20
         *Choice "Direct/Direct Thermal" "<</MediaType(Direct)>>setpagedevice"
@@ -345,7 +347,7 @@ Group "InstallableOptions/Installable Options"
       MaxSize 295 4246
       *Resolution k 1 0 0 0 "203dpi/203 DPI"
 
-      Group "PrinterSettings/Printer Settings"
+      Group "General/General"
         Option "tePrintRate/Print Speed" PickOne AnySetup 20
           Choice "3/76 mm/sec." ""
           *Choice "6/152 mm/sec." ""
@@ -362,7 +364,7 @@ Group "InstallableOptions/Installable Options"
       MaxSize 362 4246
       Resolution k 1 0 0 0 "203dpi/203 DPI"
       *Resolution k 1 0 0 0 "300dpi/300 DPI"
-      Group "PrinterSettings/Printer Settings"
+      Group "General/General"
         Option "tePrintRate/Print Speed" PickOne AnySetup 20
           Choice "3/76 mm/sec." ""      
            *Choice "5/127 mm/sec." ""
@@ -386,7 +388,7 @@ Group "InstallableOptions/Installable Options"
       HWMargins 0 0 0 0
       Resolution k 1 0 0 0 "203dpi/203 DPI"
       *Resolution k 1 0 0 0 "300dpi/300 DPI"
-      Group "PrinterSettings/Printer Settings"
+      Group "General/General"
         Option "tePrintRate/Print Speed" PickOne AnySetup 20
           Choice "3/76 mm/sec." ""
           *Choice "4/101 mm/sec." ""
@@ -418,7 +420,7 @@ Group "InstallableOptions/Installable Options"
       MediaSize w576h468
       Resolution k 1 0 0 0 "203dpi/203 DPI"
       *Resolution k 1 0 0 0 "300dpi/300 DPI"
-      Group "PrinterSettings/Printer Settings"
+      Group "General/General"
         Option "tePrintRate/Print Speed" PickOne AnySetup 20
           Choice "3/76 mm/sec." ""
           *Choice "4/101 mm/sec." ""
@@ -428,6 +430,7 @@ Group "InstallableOptions/Installable Options"
 
 
   {
+    #include "graphicsmode.h"
     ModelName "B-852R"
     PCFileName "tecb852r.ppd"
     HWMargins 0 0 0 0
@@ -435,7 +438,7 @@ Group "InstallableOptions/Installable Options"
     MinSize 283 35
     MaxSize 614 1814
     *Resolution k 1 0 0 0 "300dpi/300 DPI"
-    Group "PrinterSettings/Printer Settings"
+    Group "General/General"
       Option "tePrintRate/Print Speed" PickOne AnySetup 20
         Choice "2/50.8 mm/sec." ""
         *Choice "4/101 mm/sec." ""
@@ -444,8 +447,9 @@ Group "InstallableOptions/Installable Options"
 
   // TEc BSV4D 203 dpi & TEC BSV4T
   {
+    #include "graphicsmode.h"
 
-    Group "PrinterSettings/Printer Settings"
+    Group "General/General"
       Option "tePrintRate/Print Speed" PickOne AnySetup 20
         Choice "2/50 mm/sec." ""
         *Choice "3/76.2 mm/sec." ""
@@ -482,7 +486,7 @@ Group "InstallableOptions/Installable Options"
 
   // TECBEV4T-GS14 
   {  
-    Group "PrinterSettings/Printer Settings"
+    Group "General/General"
       Option "tePrintRate/Print Speed" PickOne AnySetup 20
         Choice "2/50 mm/sec." ""
         *Choice "3/76.2 mm/sec." ""

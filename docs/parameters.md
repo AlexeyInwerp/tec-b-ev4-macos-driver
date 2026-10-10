@@ -48,7 +48,25 @@ result is stored, so it survives power cycles without feeding labels every time.
 
 ## Where each setting lives
 
-macOS splits printer options in two, and the driver now follows that split.
+macOS splits printer options in two places, and the driver follows that split.
+
+**The Print dialog → Printer Options → General** — everything that changes how
+a label looks or how fast it comes out, in one panel:
+
+| | |
+| --- | --- |
+| Media Size, Orientation | |
+| Resolution, Media Type | Resolution is fixed by the print head and each driver offers only the one it has; see TROUBLESHOOTING |
+| Image Rendering | *Sharp* thresholds to solid black or white, right for text, barcodes and line art. *Dithered* keeps shading, for photographs |
+| Darkness | print density, -10 to +10 |
+| Print Speed | 50 to 127 mm/s; higher speeds want more darkness |
+
+Darkness and Print Speed used to sit in a "Printer Settings" feature set, a menu
+you had to open to even see them. They are job settings and belong beside the
+rest.
+
+**Print dialog → Printer Options → Cutter and Strip-off** — Print Mode and Cutter
+Option. Only meaningful with the accessory fitted, and greyed out otherwise.
 
 **Printers & Scanners → Options & Supplies → Options** — things that describe
 the printer and the media loaded in it, set once:
@@ -59,23 +77,50 @@ the printer and the media loaded in it, set once:
 | Cutter unit, Strip-off module | which accessories are fitted |
 | Label Gap | the media's gap size |
 | Media Detection | which sensor to use |
-| Graphics Mode | TOPIX / banded nibble |
 | Feed, cut and back-feed adjustment | print position calibration |
 | Ribbon adjustment | thermal transfer only |
 
-**The Print dialog** — things that can reasonably differ between jobs:
-
-| | |
-| --- | --- |
-| Paper Size, Orientation | |
-| Resolution, Media Type | Resolution is fixed by the print head and each driver offers only the one it has; see TROUBLESHOOTING |
-| Temperature (darkness), Print Speed | |
-| Print Mode, Cutter Option | |
-
-Four of these *have* to stay in the print dialog even though they feel
+Four options *have* to stay in the print dialog even though they feel
 printer-level: `Resolution`, `MediaType`, `Darkness` and the cut interval work
 by emitting PostScript that must run while the page is being rasterised. Move
 them and they simply stop working.
+
+## Settings audit
+
+Every option was changed one choice at a time and a real label sent through the
+whole pipeline, to see whether the output moved. Almost every option does.
+What was found:
+
+**Removed — Graphics Mode, on the B-EV4.** It offered TOPIX compression, raw
+8-bit (two ways) and banded nibble. The B-EV4 documents TOPIX and handles every
+job with it. The others only made the data bigger — the same label is 9.7 KB
+with TOPIX, 119 KB raw and 251 KB banded — and banded mode, built as a fix for the
+raw socket dropping jobs, did not fix that. It sat in Printers & Scanners rather
+than the print dialog, so nobody could have found it to use it anyway. The older
+printers in the PPD set keep it: how they behave with these modes is not
+something that could be tested here.
+
+**Fixed — "Cut Every 2 Labels" did nothing.** It sent a cut interval of 999,
+which the filter treated as no cut. The specification allows 1 to 100, so it now
+sends 2. Cutter only, and untested for lack of a cutter.
+
+**Kept, though they look inert in a test.** Image Rendering shows no difference
+on a vector PDF (nothing is grey) but its output differs by two orders of
+magnitude on a photograph. Cutter and Strip-off only gate other options.
+
+**Irrelevant on a plain direct-thermal B-EV4D, but left in place:**
+
+* *Ribbon Forward / Back Adjust* — a ribbon motor that a direct-thermal printer
+  does not have. They remain because the same options serve the thermal-transfer
+  models in this PPD set, and `ppdc` cannot hide an inherited option from one
+  model (redefining one only appends duplicate choices). They live in Options &
+  Supplies, out of the way.
+* *Cut / Peel adjust, Back Feed adjust* — only act on a cutter or strip module.
+
+**A trap worth knowing: the PPD and filter must be updated together.** A filter
+older than this change crashes (exit 139) on a B-EV4 PPD without Graphics Mode,
+because it dereferenced the missing option. Every installer here updates both in
+the right order, but do not copy a PPD onto a machine running an older filter.
 
 ## Media sensors
 

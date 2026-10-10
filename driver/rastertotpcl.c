@@ -467,7 +467,12 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
 
   /* Get graphics mode from ppd file for graphics drawing */
   choice = ppdFindMarkedChoice(ppd,"teGraphicsMode");
-  switch (atoi(choice->choice)) {
+ /*
+  * The B-EV4 PPDs do not offer a graphics mode - TOPIX is always right there -
+  * so the option may be absent. It is also absent from nothing else, but a
+  * missing option must never be a crash, so default to TOPIX.
+  */
+  switch (choice ? atoi(choice->choice) : 1) {
     case 4:
       Gmode = TEC_GMODE_NIBBLE; // Banded nibble mode - safe over a network socket
       break;
@@ -671,21 +676,14 @@ EndPage(ppd_file_t *ppd,		/* I - PPD file */
     /*
      * Manage the cut option every label or end of batch print 
      */
-    switch (header->cupsRowStep)
-    {
-      case 0 :
-        Tcut =0;
-        break;
-      case 1 :
-        Tcut =1;
-        break;
-      case 999 :
-        Tcut =0;
-        break;
-      default:
-        Tcut= 0;
-        break;
-    }
+   /*
+    * cupsRowStep carries the cut interval: how many labels print before the
+    * backing is cut, 1 to 100 per the specification, 0 for no cut. The upstream
+    * switch only knew 0 and 1 and mapped everything else - including the
+    * "every 2 labels" choice, which sent 999 - to no cut at all.
+    */
+    Tcut = (header->cupsRowStep >= 1 && header->cupsRowStep <= 100)
+               ? header->cupsRowStep : 0;
 
     /*
      * Version 1.2 Mirror option not managed local management
